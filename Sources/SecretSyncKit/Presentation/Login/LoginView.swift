@@ -12,7 +12,7 @@ public struct LoginView: View {
             Text("SecretSync")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
 
-            Text("面向多仓库 GitHub Actions Secrets / Variables 的本地管理与批量同步工具。已接入 GitHub App Device Flow 授权骨架，未配置 `client_id` 时会回退到 mock 登录。")
+            Text("面向多仓库 GitHub Actions Secrets / Variables 的本地管理与批量同步工具。已接入 GitHub App Device Flow 授权以及真实 Secrets / Variables 同步链路，未配置 `client_id` 时会回退到 mock 登录与 mock 同步。")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 

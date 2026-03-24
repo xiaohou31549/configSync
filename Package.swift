@@ -16,9 +16,15 @@ let package = Package(
             targets: ["SecretSyncApp"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/jedisct1/swift-sodium.git", from: "0.9.1")
+    ],
     targets: [
         .target(
-            name: "SecretSyncKit"
+            name: "SecretSyncKit",
+            dependencies: [
+                .product(name: "Sodium", package: "swift-sodium")
+            ]
         ),
         .executableTarget(
             name: "SecretSyncApp",

@@ -52,3 +52,21 @@ func tokenBundleExpiryCheck() {
     #expect(expired.isExpired)
     #expect(expired.refreshTokenUsable)
 }
+
+@Test("仓库全名会被拆分为 owner 和 repo")
+func repositoryTargetParsing() async throws {
+    let syncExecutor = GitHubSyncExecutor(
+        client: GitHubActionsAPIClient(authRepository: GitHubAuthRepository(configurationLoader: GitHubAuthConfigurationLoader(environment: ["GITHUB_APP_CLIENT_ID": "Iv1.test"]))),
+        encryptionService: PlaceholderSecretEncryptionService()
+    )
+
+    let summary = try await syncExecutor.sync(
+        SyncRequest(
+            repos: [Repo(id: 1, name: "repo", fullName: "invalid-name", owner: "x", visibility: .public, defaultBranch: "main", archived: false)],
+            items: [ConfigItem(name: "TEST", type: .variable, value: "1")],
+            overwriteExisting: true
+        )
+    )
+
+    #expect(summary.failureCount == 1)
+}

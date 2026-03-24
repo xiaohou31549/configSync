@@ -26,19 +26,24 @@ public struct AppContainer: Sendable {
 
     public static func bootstrap() -> AppContainer {
         let configRepository = InMemoryConfigRepository()
-        let syncExecutor = MockSyncExecutor()
         let configurationLoader = GitHubAuthConfigurationLoader()
 
         let authRepository: any AuthRepository
         let repositoryCatalog: any RepositoryCatalog
+        let syncExecutor: any SyncExecutor
 
         if (try? configurationLoader.loadIfAvailable()) != nil {
             let githubAuthRepository = GitHubAuthRepository(configurationLoader: configurationLoader)
             authRepository = githubAuthRepository
             repositoryCatalog = GitHubRepositoryCatalog(client: GitHubAPIClient(authRepository: githubAuthRepository))
+            syncExecutor = GitHubSyncExecutor(
+                client: GitHubActionsAPIClient(authRepository: githubAuthRepository),
+                encryptionService: PlaceholderSecretEncryptionService()
+            )
         } else {
             authRepository = MockGitHubAuthRepository()
             repositoryCatalog = MockRepositoryCatalog()
+            syncExecutor = MockSyncExecutor()
         }
 
         return AppContainer(
