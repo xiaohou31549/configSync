@@ -25,7 +25,7 @@ public struct AppContainer: Sendable {
     }
 
     public static func bootstrap() -> AppContainer {
-        let configRepository = InMemoryConfigRepository()
+        let configRepository: any ConfigRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
         let configurationLoader = GitHubAuthConfigurationLoader()
 
         let authRepository: any AuthRepository

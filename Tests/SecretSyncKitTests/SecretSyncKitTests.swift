@@ -70,3 +70,28 @@ func repositoryTargetParsing() async throws {
 
     #expect(summary.failureCount == 1)
 }
+
+@Test("SQLite 仓库会持久化 Variable 与 Secret")
+func sqliteConfigRepositoryPersistsItems() async throws {
+    let databaseURL = FileManager.default.temporaryDirectory
+        .appending(path: UUID().uuidString)
+        .appending(path: "config.sqlite3")
+    let keychainService = "com.tough.SecretSync.tests.\(UUID().uuidString)"
+    let repository = try SQLiteConfigRepository(
+        databaseURL: databaseURL,
+        keychainStore: KeychainStore(service: keychainService)
+    )
+
+    let variable = try await repository.save(
+        draft: ConfigItemDraft(name: "IMAGE_NAME", type: .variable, value: "ghcr.io/demo/app", description: "")
+    )
+    let secret = try await repository.save(
+        draft: ConfigItemDraft(name: "VPS_KEY", type: .secret, value: "super-secret", description: "")
+    )
+
+    let items = try await repository.listItems()
+
+    #expect(items.count == 2)
+    #expect(items.contains(where: { $0.id == variable.id && $0.value == "ghcr.io/demo/app" }))
+    #expect(items.contains(where: { $0.id == secret.id && $0.value == "super-secret" }))
+}
