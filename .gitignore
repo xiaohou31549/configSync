@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+SecretSync.auth.json
+DerivedData/
