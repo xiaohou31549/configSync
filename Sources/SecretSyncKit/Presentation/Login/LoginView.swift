@@ -31,6 +31,18 @@ public struct LoginView: View {
             .buttonStyle(.borderedProminent)
             .disabled(viewModel.isSigningIn)
 
+            HStack {
+                Button("配置 OAuth") {
+                    viewModel.loadAuthSettings()
+                    viewModel.showAuthSettings = true
+                }
+                .buttonStyle(.bordered)
+
+                Text(viewModel.hasSavedOAuthConfiguration ? "已检测到本地 OAuth 配置" : "当前未配置 OAuth，将回退到 mock 登录")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             if let message = viewModel.authProgressMessage {
                 Text(message)
                     .font(.footnote)
@@ -51,11 +63,78 @@ public struct LoginView: View {
                 }
             }
 
-            Text("配置方式：在环境变量中设置 `GITHUB_CLIENT_ID` 与 `GITHUB_CLIENT_SECRET`，或在项目根目录创建 `SecretSync.auth.json`。GitHub OAuth App 的回调地址建议配置为 `http://127.0.0.1/oauth/callback`。")
+            Text("推荐直接点击上方“配置 OAuth”保存本地授权信息。你也可以继续使用环境变量 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`。GitHub OAuth App 的回调地址建议配置为 `http://127.0.0.1/oauth/callback`。")
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
         }
         .padding(40)
         .frame(maxWidth: 520)
+        .sheet(isPresented: $viewModel.showAuthSettings) {
+            AuthSettingsSheet(viewModel: viewModel)
+        }
+    }
+}
+
+private struct AuthSettingsSheet: View {
+    @ObservedObject var viewModel: AppViewModel
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("OAuth 配置") {
+                    TextField("Client ID", text: $viewModel.authSettingsDraft.clientID)
+                        .textFieldStyle(.roundedBorder)
+
+                    SecureField("Client Secret", text: $viewModel.authSettingsDraft.clientSecret)
+                        .textFieldStyle(.roundedBorder)
+
+                    TextField("Callback Path", text: $viewModel.authSettingsDraft.callbackPath)
+                        .textFieldStyle(.roundedBorder)
+
+                    TextField("Scopes", text: $viewModel.authSettingsDraft.scopes)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Section("GitHub App 回调地址") {
+                    Text("请在 GitHub OAuth App 中把回调地址配置为 `http://127.0.0.1\(normalizedCallbackPath)`。应用在登录时会自动使用本机 loopback 回调，不需要手动输入验证码。")
+                        .textSelection(.enabled)
+                        .font(.footnote)
+
+                    Text("本地保存位置：\(viewModel.authSettingsLocation)")
+                        .textSelection(.enabled)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("OAuth 设置")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("关闭") {
+                        viewModel.showAuthSettings = false
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(viewModel.isSavingAuthSettings ? "保存中..." : "保存") {
+                        viewModel.saveAuthSettings()
+                    }
+                    .disabled(viewModel.isSavingAuthSettings)
+                }
+
+                ToolbarItem(placement: .automatic) {
+                    Button("清除配置", role: .destructive) {
+                        viewModel.clearAuthSettings()
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 640, minHeight: 420)
+    }
+
+    private var normalizedCallbackPath: String {
+        let trimmed = viewModel.authSettingsDraft.callbackPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "/oauth/callback" }
+        return trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
     }
 }

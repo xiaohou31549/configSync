@@ -33,8 +33,7 @@ func authConfigurationLoadsFromEnvironment() throws {
         environment: [
             "GITHUB_CLIENT_ID": "Iv1.testclient",
             "GITHUB_CLIENT_SECRET": "secret-123"
-        ],
-        fileManager: .default
+        ]
     )
 
     let configuration = try loader.loadIfAvailable()
@@ -107,4 +106,25 @@ func sqliteConfigRepositoryPersistsItems() async throws {
     #expect(items.count == 2)
     #expect(items.contains(where: { $0.id == variable.id && $0.value == "ghcr.io/demo/app" }))
     #expect(items.contains(where: { $0.id == secret.id && $0.value == "super-secret" }))
+}
+
+@Test("认证配置会写入并读回本地文件")
+func authSettingsStoreRoundTrip() throws {
+    let fileManager = FileManager.default
+    let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString)
+    try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+    let store = FileAuthSettingsStore(baseDirectoryOverride: root)
+    let draft = GitHubAuthSettingsDraft(
+        clientID: "client-id",
+        clientSecret: "client-secret",
+        callbackPath: "oauth/callback",
+        scopes: "repo read:user"
+    )
+
+    try store.saveDraft(draft)
+    let loaded = try store.loadDraft()
+
+    #expect(loaded?.clientID == "client-id")
+    #expect(loaded?.clientSecret == "client-secret")
+    #expect(loaded?.callbackPath == "/oauth/callback")
 }

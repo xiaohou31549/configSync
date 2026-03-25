@@ -7,6 +7,7 @@ public struct AppContainer: Sendable {
     public let saveConfigItemUseCase: SaveConfigItemUseCase
     public let deleteConfigItemUseCase: DeleteConfigItemUseCase
     public let syncConfigItemsUseCase: SyncConfigItemsUseCase
+    public let authSettingsStore: any AuthSettingsStore
 
     public init(
         signInUseCase: SignInUseCase,
@@ -14,7 +15,8 @@ public struct AppContainer: Sendable {
         loadConfigItemsUseCase: LoadConfigItemsUseCase,
         saveConfigItemUseCase: SaveConfigItemUseCase,
         deleteConfigItemUseCase: DeleteConfigItemUseCase,
-        syncConfigItemsUseCase: SyncConfigItemsUseCase
+        syncConfigItemsUseCase: SyncConfigItemsUseCase,
+        authSettingsStore: any AuthSettingsStore
     ) {
         self.signInUseCase = signInUseCase
         self.fetchRepositoriesUseCase = fetchRepositoriesUseCase
@@ -22,29 +24,23 @@ public struct AppContainer: Sendable {
         self.saveConfigItemUseCase = saveConfigItemUseCase
         self.deleteConfigItemUseCase = deleteConfigItemUseCase
         self.syncConfigItemsUseCase = syncConfigItemsUseCase
+        self.authSettingsStore = authSettingsStore
     }
 
     public static func bootstrap() -> AppContainer {
         let configRepository: any ConfigRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
-        let configurationLoader = GitHubAuthConfigurationLoader()
-
-        let authRepository: any AuthRepository
-        let repositoryCatalog: any RepositoryCatalog
-        let syncExecutor: any SyncExecutor
-
-        if (try? configurationLoader.loadIfAvailable()) != nil {
-            let githubAuthRepository = GitHubAuthRepository(configurationLoader: configurationLoader)
-            authRepository = githubAuthRepository
-            repositoryCatalog = GitHubRepositoryCatalog(client: GitHubAPIClient(authRepository: githubAuthRepository))
-            syncExecutor = GitHubSyncExecutor(
+        let authSettingsStore = FileAuthSettingsStore()
+        let authRepository = ConfigAwareAuthRepository()
+        let githubAuthRepository = GitHubAuthRepository()
+        let repositoryCatalog = ConfigAwareRepositoryCatalog(
+            client: GitHubAPIClient(authRepository: githubAuthRepository)
+        )
+        let syncExecutor = ConfigAwareSyncExecutor(
+            realExecutor: GitHubSyncExecutor(
                 client: GitHubActionsAPIClient(authRepository: githubAuthRepository),
                 encryptionService: PlaceholderSecretEncryptionService()
             )
-        } else {
-            authRepository = MockGitHubAuthRepository()
-            repositoryCatalog = MockRepositoryCatalog()
-            syncExecutor = MockSyncExecutor()
-        }
+        )
 
         return AppContainer(
             signInUseCase: SignInUseCase(authRepository: authRepository),
@@ -52,7 +48,8 @@ public struct AppContainer: Sendable {
             loadConfigItemsUseCase: LoadConfigItemsUseCase(configRepository: configRepository),
             saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: configRepository),
             deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
-            syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor)
+            syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor),
+            authSettingsStore: authSettingsStore
         )
     }
 }

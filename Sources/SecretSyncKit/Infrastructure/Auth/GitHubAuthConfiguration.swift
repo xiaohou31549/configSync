@@ -1,6 +1,6 @@
 import Foundation
 
-public struct GitHubAuthConfiguration: Decodable, Equatable, Sendable {
+public struct GitHubAuthConfiguration: Codable, Equatable, Sendable {
     public let clientID: String
     public let clientSecret: String
     public let appName: String
@@ -22,17 +22,17 @@ public struct GitHubAuthConfiguration: Decodable, Equatable, Sendable {
     }
 }
 
-public struct GitHubAuthConfigurationLoader {
+public struct GitHubAuthConfigurationLoader: Sendable {
     private let environment: [String: String]
-    private let fileManager: FileManager
+    private let baseDirectoryOverride: URL?
     private let decoder = JSONDecoder()
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
-        fileManager: FileManager = .default
+        baseDirectoryOverride: URL? = nil
     ) {
         self.environment = environment
-        self.fileManager = fileManager
+        self.baseDirectoryOverride = baseDirectoryOverride
     }
 
     public func loadIfAvailable() throws -> GitHubAuthConfiguration? {
@@ -50,7 +50,7 @@ public struct GitHubAuthConfigurationLoader {
         }
 
         for path in candidatePaths() {
-            guard fileManager.fileExists(atPath: path.path()) else { continue }
+            guard FileManager.default.fileExists(atPath: path.path()) else { continue }
             let data = try Data(contentsOf: path)
             return try decoder.decode(GitHubAuthConfiguration.self, from: data)
         }
@@ -66,15 +66,15 @@ public struct GitHubAuthConfigurationLoader {
     }
 
     private func candidatePaths() -> [URL] {
-        let currentDirectory = URL(filePath: fileManager.currentDirectoryPath)
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appending(path: "SecretSync")
-            .appending(path: "auth.json")
+        let currentDirectory = URL(filePath: FileManager.default.currentDirectoryPath)
+        let appSupport = baseDirectoryOverride ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appending(path: "SecretSync", directoryHint: .isDirectory)
+        let appSupportFile = appSupport?.appending(path: "auth.json")
 
         return [
             currentDirectory.appending(path: "SecretSync.auth.json"),
             currentDirectory.appending(path: ".secretsync").appending(path: "auth.json"),
-            appSupport
+            appSupportFile
         ].compactMap { $0 }
     }
 }

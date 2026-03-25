@@ -26,6 +26,11 @@ public final class AppViewModel: ObservableObject {
     @Published public var errorMessage: String?
     @Published public var authProgressMessage: String?
     @Published public var authorizationURL: URL?
+    @Published public var showAuthSettings = false
+    @Published public var authSettingsDraft = GitHubAuthSettingsDraft()
+    @Published public var authSettingsLocation = ""
+    @Published public var hasSavedOAuthConfiguration = false
+    @Published public var isSavingAuthSettings = false
 
     private let container: AppContainer
 
@@ -93,6 +98,7 @@ public final class AppViewModel: ObservableObject {
     }
 
     public func restoreSession() async {
+        loadAuthSettings()
         do {
             session = try await container.signInUseCase.restoreSession()
             if session != nil {
@@ -243,5 +249,44 @@ public final class AppViewModel: ObservableObject {
         guard let url = authorizationURL else { return }
         NSWorkspace.shared.open(url)
 #endif
+    }
+
+    public func loadAuthSettings() {
+        do {
+            authSettingsDraft = try container.authSettingsStore.loadDraft() ?? GitHubAuthSettingsDraft()
+            authSettingsLocation = try container.authSettingsStore.settingsLocation().path()
+            hasSavedOAuthConfiguration = authSettingsDraft.isValid
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func saveAuthSettings() {
+        isSavingAuthSettings = true
+        errorMessage = nil
+
+        Task {
+            defer { isSavingAuthSettings = false }
+
+            do {
+                try container.authSettingsStore.saveDraft(authSettingsDraft)
+                loadAuthSettings()
+                authProgressMessage = "OAuth 配置已保存，可以直接重新点击登录"
+                showAuthSettings = false
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    public func clearAuthSettings() {
+        do {
+            try container.authSettingsStore.removeDraft()
+            authSettingsDraft = GitHubAuthSettingsDraft()
+            hasSavedOAuthConfiguration = false
+            authProgressMessage = "已清除本地 OAuth 配置，当前会回退到 mock 登录"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
