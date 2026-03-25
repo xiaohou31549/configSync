@@ -5,3 +5,6 @@ DerivedData/
 build/
 dist/
 .DS_Store
+
+SecretSync.xcodeproj/xcuserdata/
+SecretSync.xcodeproj/project.xcworkspace/xcuserdata/

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -17,7 +17,7 @@
 		150784348A19CDB36914D9B7 /* SecretSync */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SecretSync; path = .; sourceTree = SOURCE_ROOT; };
 		45D3A5F7647ECA9318846AEE /* SecretSyncApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncApp.swift; sourceTree = "<group>"; };
 		79FBFF94F2B6DE5945D49FBB /* SecretSync.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecretSync.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8448FA8A2AE64AD1BCF3CE24 /* SecretSyncKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SecretSyncKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8448FA8A2AE64AD1BCF3CE24 /* SecretSyncKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = SecretSyncKitTests.xctest; path = SecretSync.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9899518CAA78ED925DDCF34D /* SecretSyncKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncKitTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -159,7 +159,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					548BC0A44BC5F9D28D7A6B1B = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					86874B81C6E78057FF469C0A = {
@@ -181,7 +180,6 @@
 			packageReferences = (
 				779D88EDB2EF73321701347D /* XCLocalSwiftPackageReference "." */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -232,11 +230,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 4374YTC7UU;
+				INFOPLIST_KEY_CFBundleDisplayName = SecretSync;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 xiaohou31549";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.houji.secretSync;
 				PRODUCT_MODULE_NAME = SecretSyncApp;
 				SDKROOT = macosx;
 			};
@@ -408,11 +411,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 4374YTC7UU;
+				INFOPLIST_KEY_CFBundleDisplayName = SecretSync;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 xiaohou31549";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.houji.secretSync;
 				PRODUCT_MODULE_NAME = SecretSyncApp;
 				SDKROOT = macosx;
 			};
