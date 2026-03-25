@@ -2,7 +2,7 @@ import Foundation
 
 public actor GitHubAuthRepository: AuthRepository {
     private let configurationLoader: GitHubAuthConfigurationLoader
-    private let deviceFlowService: GitHubDeviceFlowService
+    private let oauthService: GitHubOAuthService
     private let keychainStore: KeychainStore
     private let session: URLSession
     private let decoder = JSONDecoder()
@@ -16,12 +16,12 @@ public actor GitHubAuthRepository: AuthRepository {
 
     init(
         configurationLoader: GitHubAuthConfigurationLoader = GitHubAuthConfigurationLoader(),
-        deviceFlowService: GitHubDeviceFlowService = GitHubDeviceFlowService(),
+        oauthService: GitHubOAuthService = GitHubOAuthService(),
         keychainStore: KeychainStore = KeychainStore(),
         session: URLSession = .shared
     ) {
         self.configurationLoader = configurationLoader
-        self.deviceFlowService = deviceFlowService
+        self.oauthService = oauthService
         self.keychainStore = keychainStore
         self.session = session
     }
@@ -33,60 +33,39 @@ public actor GitHubAuthRepository: AuthRepository {
 
         if bundle.isExpired {
             guard bundle.refreshTokenUsable, let refreshToken = bundle.refreshToken else {
+                if bundle.refreshToken == nil {
+                    return try await validateSession(bundle)
+                }
+
                 try clearStoredCredentials()
                 return nil
             }
 
             let configuration = try configurationLoader.requireConfiguration()
-            bundle = try await deviceFlowService.refreshToken(refreshToken, configuration: configuration)
+            bundle = try await oauthService.refreshToken(refreshToken, configuration: configuration)
             try saveTokenBundle(bundle)
             await persist(progress: .refreshingToken, handler: nil)
         }
 
-        let username = try await fetchUsername(accessToken: bundle.accessToken)
-        try keychainStore.save(username, for: usernameKey)
-        return UserSession(username: username, accessToken: bundle.accessToken, tokenBundle: bundle)
+        return try await validateSession(bundle)
     }
 
     public func signIn(progress: AuthProgressHandler?) async throws -> UserSession {
         let configuration = try configurationLoader.requireConfiguration()
-        await persist(progress: .requestingCode, handler: progress)
-        let authorization = try await deviceFlowService.requestDeviceAuthorization(configuration: configuration)
-        await persist(progress: .waitingForUser(authorization), handler: progress)
+        await persist(progress: .preparingBrowserLogin, handler: progress)
+        let context = try oauthService.prepareAuthorization(configuration: configuration)
+        await persist(progress: .openingBrowser(context.authorizationURL), handler: progress)
+        await persist(progress: .waitingForBrowserCallback(port: context.port), handler: progress)
 
-        var interval = max(authorization.interval, 5)
+        let callback = try await oauthService.awaitAuthorizationCallback(context: context)
+        await persist(progress: .exchangingCode, handler: progress)
+        let bundle = try await oauthService.exchangeCode(callback, context: context, configuration: configuration)
+        try saveTokenBundle(bundle)
 
-        while Date() < authorization.expiresAt {
-            await persist(progress: .polling(nextInterval: interval), handler: progress)
-            try await Task.sleep(for: .seconds(interval))
-
-            let result = try await deviceFlowService.exchangeDeviceCode(authorization, configuration: configuration)
-            switch result {
-            case let .success(bundle):
-                try saveTokenBundle(bundle)
-                await persist(progress: .loadingProfile, handler: progress)
-                let username = try await fetchUsername(accessToken: bundle.accessToken)
-                try keychainStore.save(username, for: usernameKey)
-                let session = UserSession(username: username, accessToken: bundle.accessToken, tokenBundle: bundle)
-                await persist(progress: .completed(username: username), handler: progress)
-                return session
-            case let .pending(errorCode):
-                switch errorCode {
-                case "authorization_pending":
-                    continue
-                case "slow_down":
-                    interval += 5
-                case "expired_token":
-                    throw AppError.infrastructure("Device Code 已过期，请重新发起登录")
-                case "access_denied":
-                    throw AppError.infrastructure("用户取消了 GitHub 授权")
-                default:
-                    throw AppError.infrastructure("GitHub 授权失败：\(errorCode)")
-                }
-            }
-        }
-
-        throw AppError.infrastructure("GitHub 授权超时，请重新发起登录")
+        await persist(progress: .loadingProfile, handler: progress)
+        let session = try await validateSession(bundle)
+        await persist(progress: .completed(username: session.username), handler: progress)
+        return session
     }
 
     public func signOut() async throws {
@@ -119,6 +98,12 @@ public actor GitHubAuthRepository: AuthRepository {
 
         let payload = try decoder.decode(UserProfileResponse.self, from: data)
         return payload.login
+    }
+
+    private func validateSession(_ bundle: TokenBundle) async throws -> UserSession {
+        let username = try await fetchUsername(accessToken: bundle.accessToken)
+        try keychainStore.save(username, for: usernameKey)
+        return UserSession(username: username, accessToken: bundle.accessToken, tokenBundle: bundle)
     }
 
     private func loadTokenBundle() throws -> TokenBundle? {

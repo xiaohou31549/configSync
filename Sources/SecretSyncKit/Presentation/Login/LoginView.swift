@@ -12,7 +12,7 @@ public struct LoginView: View {
             Text("SecretSync")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
 
-            Text("面向多仓库 GitHub Actions Secrets / Variables 的本地管理与批量同步工具。已接入 GitHub App Device Flow 授权以及真实 Secrets / Variables 同步链路，未配置 `client_id` 时会回退到 mock 登录与 mock 同步。")
+            Text("面向多仓库 GitHub Actions Secrets / Variables 的本地管理与批量同步工具。已切换到标准 OAuth 浏览器回调登录，授权完成后会通过本机 `127.0.0.1` 回调自动返回应用。")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -24,7 +24,7 @@ public struct LoginView: View {
                         ProgressView()
                             .controlSize(.small)
                     }
-                    Text(viewModel.isSigningIn ? "正在模拟 Device Flow 登录..." : "Sign in with GitHub")
+                    Text(viewModel.isSigningIn ? "正在打开 GitHub 浏览器授权..." : "Sign in with GitHub")
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -37,16 +37,11 @@ public struct LoginView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if let authorization = viewModel.deviceAuthorization {
-                GroupBox("授权信息") {
+            if let authorizationURL = viewModel.authorizationURL {
+                GroupBox("浏览器授权") {
                     VStack(alignment: .leading, spacing: 10) {
-                        LabeledContent("User Code") {
-                            Text(authorization.userCode)
-                                .textSelection(.enabled)
-                                .font(.system(.body, design: .monospaced))
-                        }
-                        LabeledContent("验证地址") {
-                            Text(authorization.verificationURI.absoluteString)
+                        LabeledContent("授权地址") {
+                            Text(authorizationURL.absoluteString)
                                 .textSelection(.enabled)
                         }
                         Button("重新打开 GitHub 授权页") {
@@ -56,7 +51,7 @@ public struct LoginView: View {
                 }
             }
 
-            Text("配置方式：在环境变量中设置 `GITHUB_APP_CLIENT_ID`，或在项目根目录创建 `SecretSync.auth.json`，内容示例为 `{\"clientID\":\"Iv1.xxxxx\",\"appName\":\"SecretSync\"}`。")
+            Text("配置方式：在环境变量中设置 `GITHUB_CLIENT_ID` 与 `GITHUB_CLIENT_SECRET`，或在项目根目录创建 `SecretSync.auth.json`。GitHub OAuth App 的回调地址建议配置为 `http://127.0.0.1/oauth/callback`。")
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
         }

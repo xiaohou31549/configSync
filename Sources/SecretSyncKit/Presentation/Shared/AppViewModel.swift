@@ -25,7 +25,7 @@ public final class AppViewModel: ObservableObject {
     @Published public var syncSummary: SyncSummary?
     @Published public var errorMessage: String?
     @Published public var authProgressMessage: String?
-    @Published public var deviceAuthorization: DeviceAuthorization?
+    @Published public var authorizationURL: URL?
 
     private let container: AppContainer
 
@@ -69,7 +69,7 @@ public final class AppViewModel: ObservableObject {
         isSigningIn = true
         errorMessage = nil
         authProgressMessage = nil
-        deviceAuthorization = nil
+        authorizationURL = nil
 
         Task {
             defer { isSigningIn = false }
@@ -78,8 +78,8 @@ public final class AppViewModel: ObservableObject {
                 session = try await container.signInUseCase.execute { [weak self] progress in
                     await MainActor.run {
                         self?.authProgressMessage = progress.message
-                        if case let .waitingForUser(authorization) = progress {
-                            self?.deviceAuthorization = authorization
+                        if case let .openingBrowser(url) = progress {
+                            self?.authorizationURL = url
                             self?.openVerificationURL()
                         }
                     }
@@ -114,7 +114,7 @@ public final class AppViewModel: ObservableObject {
                 selectedConfigItemID = nil
                 syncSummary = nil
                 authProgressMessage = nil
-                deviceAuthorization = nil
+                authorizationURL = nil
                 createNewDraft()
             } catch {
                 errorMessage = error.localizedDescription
@@ -240,7 +240,7 @@ public final class AppViewModel: ObservableObject {
 
     public func openVerificationURL() {
 #if canImport(AppKit)
-        guard let url = deviceAuthorization?.verificationURI else { return }
+        guard let url = authorizationURL else { return }
         NSWorkspace.shared.open(url)
 #endif
     }

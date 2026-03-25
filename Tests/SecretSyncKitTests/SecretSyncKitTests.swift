@@ -30,13 +30,17 @@ func syncValidatesSelections() async throws {
 @Test("优先从环境变量读取 GitHub App client_id")
 func authConfigurationLoadsFromEnvironment() throws {
     let loader = GitHubAuthConfigurationLoader(
-        environment: ["GITHUB_APP_CLIENT_ID": "Iv1.testclient"],
+        environment: [
+            "GITHUB_CLIENT_ID": "Iv1.testclient",
+            "GITHUB_CLIENT_SECRET": "secret-123"
+        ],
         fileManager: .default
     )
 
     let configuration = try loader.loadIfAvailable()
 
     #expect(configuration?.clientID == "Iv1.testclient")
+    #expect(configuration?.clientSecret == "secret-123")
 }
 
 @Test("TokenBundle 会在临近过期时判定为失效")
@@ -56,7 +60,16 @@ func tokenBundleExpiryCheck() {
 @Test("仓库全名会被拆分为 owner 和 repo")
 func repositoryTargetParsing() async throws {
     let syncExecutor = GitHubSyncExecutor(
-        client: GitHubActionsAPIClient(authRepository: GitHubAuthRepository(configurationLoader: GitHubAuthConfigurationLoader(environment: ["GITHUB_APP_CLIENT_ID": "Iv1.test"]))),
+        client: GitHubActionsAPIClient(
+            authRepository: GitHubAuthRepository(
+                configurationLoader: GitHubAuthConfigurationLoader(
+                    environment: [
+                        "GITHUB_CLIENT_ID": "Iv1.test",
+                        "GITHUB_CLIENT_SECRET": "secret"
+                    ]
+                )
+            )
+        ),
         encryptionService: PlaceholderSecretEncryptionService()
     )
 

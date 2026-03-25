@@ -10,17 +10,19 @@ public actor MockGitHubAuthRepository: AuthRepository {
     }
 
     public func signIn(progress: AuthProgressHandler?) async throws -> UserSession {
-        await progress?(.requestingCode)
+        await progress?(.preparingBrowserLogin)
         try await Task.sleep(for: .milliseconds(900))
-        let authorization = DeviceAuthorization(
-            deviceCode: "mock-device-code",
-            userCode: "ABCD-EFGH",
-            verificationURI: URL(string: "https://github.com/login/device")!,
-            expiresAt: Date().addingTimeInterval(900),
-            interval: 5
+        let authorizationURL = URL(string: "https://github.com/login/oauth/authorize?client_id=mock")!
+        let context = OAuthAuthorizationContext(
+            authorizationURL: authorizationURL,
+            redirectURI: "http://127.0.0.1:45678/oauth/callback",
+            callbackPath: "/oauth/callback",
+            port: 45678,
+            state: "mock-state",
+            codeVerifier: "mock-verifier"
         )
-        await progress?(.waitingForUser(authorization))
-        await progress?(.polling(nextInterval: 5))
+        await progress?(.openingBrowser(context.authorizationURL))
+        await progress?(.waitingForBrowserCallback(port: context.port))
         try await Task.sleep(for: .milliseconds(600))
         let bundle = TokenBundle(
             accessToken: "mock-device-flow-token",
