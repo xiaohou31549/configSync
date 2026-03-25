@@ -1,0 +1,61 @@
+name: SecretSync
+options:
+  minimumXcodeGenVersion: 2.38.0
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+
+packages:
+  SecretSyncPackage:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    PRODUCT_NAME: SecretSync
+    PRODUCT_BUNDLE_IDENTIFIER: com.xiaohou31549.SecretSync
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: YES
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleDisplayName: SecretSync
+    INFOPLIST_KEY_CFBundleName: SecretSync
+    INFOPLIST_KEY_CFBundleShortVersionString: $(MARKETING_VERSION)
+    INFOPLIST_KEY_CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+    INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+    INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2026 xiaohou31549
+    MACOSX_DEPLOYMENT_TARGET: 14.0
+
+targets:
+  SecretSync:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/SecretSyncApp
+    dependencies:
+      - package: SecretSyncPackage
+        product: SecretSyncKit
+    settings:
+      base:
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        PRODUCT_MODULE_NAME: SecretSyncApp
+    scheme:
+      gatherCoverageData: false
+      testTargets:
+        - SecretSyncKitTests
+
+  SecretSyncKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/SecretSyncKitTests
+    dependencies:
+      - package: SecretSyncPackage
+        product: SecretSyncKit
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: ""
+        TEST_HOST: ""

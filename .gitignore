@@ -2,3 +2,6 @@
 .swiftpm/
 SecretSync.auth.json
 DerivedData/
+build/
+dist/
+.DS_Store
