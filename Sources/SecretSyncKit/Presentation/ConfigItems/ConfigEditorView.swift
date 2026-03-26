@@ -12,8 +12,26 @@ public struct ConfigEditorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 if !viewModel.isAuthenticated {
-                    LoginView(viewModel: viewModel)
-                        .padding(.bottom, 4)
+                    GroupBox("准备同步时再登录") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("你现在可以先编辑并保存本地配置。只有在读取 GitHub 仓库或执行同步时，才需要完成 GitHub 授权。")
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            HStack {
+                                Button("登录 GitHub") {
+                                    viewModel.signIn()
+                                }
+                                .buttonStyle(.borderedProminent)
+
+                                Button("配置 OAuth") {
+                                    viewModel.loadAuthSettings()
+                                    viewModel.showAuthSettings = true
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                    }
                 }
 
                 HStack {
