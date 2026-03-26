@@ -34,26 +34,16 @@ private struct MainDashboardView: View {
     @ObservedObject var viewModel: AppViewModel
 
     var body: some View {
-        NavigationSplitView {
+        HSplitView {
             RepositoryListView(viewModel: viewModel)
-        } content: {
+                .frame(minWidth: 300, idealWidth: 340, maxWidth: 380, maxHeight: .infinity)
+
             ConfigItemsView(viewModel: viewModel)
-        } detail: {
+                .frame(minWidth: 280, idealWidth: 320, maxWidth: 360, maxHeight: .infinity)
+
             ConfigEditorView(viewModel: viewModel)
+                .frame(minWidth: 540, idealWidth: 720, maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationSplitViewStyle(.balanced)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if viewModel.isAuthenticated {
-                    Button("退出登录") {
-                        viewModel.signOut()
-                    }
-                } else {
-                    Button("登录 GitHub") {
-                        viewModel.signIn()
-                    }
-                }
-            }
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

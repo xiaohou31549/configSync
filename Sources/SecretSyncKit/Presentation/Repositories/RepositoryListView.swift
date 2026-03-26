@@ -9,8 +9,22 @@ public struct RepositoryListView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("目标仓库")
-                .font(.title2.bold())
+            HStack(alignment: .firstTextBaseline) {
+                Text("目标仓库")
+                    .font(.title2.bold())
+                Spacer()
+                if viewModel.isAuthenticated {
+                    Button("退出登录") {
+                        viewModel.signOut()
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button("登录 GitHub") {
+                        viewModel.signIn()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
 
             if viewModel.isAuthenticated {
                 TextField("搜索仓库或 owner", text: $viewModel.repoSearchText)
@@ -60,6 +74,7 @@ public struct RepositoryListView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 Text("已选 \(viewModel.selectedRepoIDs.count) 个仓库")
                     .font(.footnote)
