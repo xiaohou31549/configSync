@@ -2,14 +2,33 @@ import SwiftUI
 
 public struct RootView: View {
     @StateObject private var viewModel: AppViewModel
+    #if canImport(AppKit)
+    @StateObject private var windowChromeMetrics = WindowChromeMetrics()
+    #endif
 
     public init(container: AppContainer) {
         _viewModel = StateObject(wrappedValue: AppViewModel(container: container))
     }
 
     public var body: some View {
+        #if canImport(AppKit)
+        let topInset = windowChromeMetrics.topInset
+        #else
+        let topInset: CGFloat = 0
+        #endif
+
         MainDashboardView(viewModel: viewModel)
         .frame(minWidth: 1180, minHeight: 760)
+        .safeAreaInset(edge: .top) {
+            Color.clear
+                .frame(height: topInset)
+        }
+        #if canImport(AppKit)
+        .background(
+            WindowChromeReader(metrics: windowChromeMetrics)
+                .frame(width: 0, height: 0)
+        )
+        #endif
         .task {
             await viewModel.restoreSession()
         }
@@ -36,7 +55,6 @@ private struct MainDashboardView: View {
             ConfigEditorView(viewModel: viewModel)
         }
         .navigationSplitViewStyle(.balanced)
-        .safeAreaPadding(.top, 20)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 if viewModel.isAuthenticated {
