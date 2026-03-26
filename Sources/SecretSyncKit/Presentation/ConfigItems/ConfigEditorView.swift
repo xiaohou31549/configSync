@@ -117,8 +117,12 @@ public struct ConfigEditorView: View {
                 if let summary = viewModel.syncSummary {
                     SyncResultsPanel(summary: summary)
                 }
+
+                Spacer(minLength: 0)
             }
             .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
