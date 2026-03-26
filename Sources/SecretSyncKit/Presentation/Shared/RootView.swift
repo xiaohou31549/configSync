@@ -36,6 +36,7 @@ private struct MainDashboardView: View {
             ConfigEditorView(viewModel: viewModel)
         }
         .navigationSplitViewStyle(.balanced)
+        .safeAreaPadding(.top, 20)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 if viewModel.isAuthenticated {
