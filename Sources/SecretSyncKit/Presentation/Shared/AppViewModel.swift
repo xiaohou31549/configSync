@@ -70,6 +70,14 @@ public final class AppViewModel: ObservableObject {
         return filteredConfigItems
     }
 
+    public var isAuthenticated: Bool {
+        session != nil
+    }
+
+    public var hasConfigItems: Bool {
+        !configItems.isEmpty
+    }
+
     public func signIn() {
         isSigningIn = true
         errorMessage = nil
@@ -225,6 +233,12 @@ public final class AppViewModel: ObservableObject {
     }
 
     public func syncSelected() {
+        guard isAuthenticated else {
+            authProgressMessage = "同步前需要先登录 GitHub，登录后即可加载仓库并执行同步"
+            signIn()
+            return
+        }
+
         isSyncing = true
         errorMessage = nil
         syncSummary = nil
@@ -249,6 +263,33 @@ public final class AppViewModel: ObservableObject {
         guard let url = authorizationURL else { return }
         NSWorkspace.shared.open(url)
 #endif
+    }
+
+    public func importSampleConfigItems() {
+        guard !hasConfigItems else { return }
+
+        Task {
+            do {
+                for item in SampleData.configItems {
+                    let draft = ConfigItemDraft(
+                        name: item.name,
+                        type: item.type,
+                        value: item.value,
+                        description: item.description ?? ""
+                    )
+                    _ = try await container.saveConfigItemUseCase.execute(draft)
+                }
+                configItems = try await container.loadConfigItemsUseCase.execute()
+                configTypeFilter = .secret
+                selectedConfigItemID = filteredConfigItems.first?.id
+                if let selected = selectedConfigItemID,
+                   let item = configItems.first(where: { $0.id == selected }) {
+                    selectConfigItem(item)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     public func loadAuthSettings() {

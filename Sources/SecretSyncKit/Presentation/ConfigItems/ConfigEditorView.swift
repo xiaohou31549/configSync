@@ -11,8 +11,13 @@ public struct ConfigEditorView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if !viewModel.isAuthenticated {
+                    LoginView(viewModel: viewModel)
+                        .padding(.bottom, 4)
+                }
+
                 HStack {
-                    Text("Editor")
+                    Text("编辑器")
                         .font(.title2.bold())
                     Spacer()
                     if viewModel.isRefreshing || viewModel.isSaving || viewModel.isSyncing {
@@ -58,6 +63,12 @@ public struct ConfigEditorView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
+                        if !viewModel.isAuthenticated {
+                            Text("当前还未登录 GitHub。你可以先保存本地配置；当你准备读取仓库或开始同步时，再点击右侧按钮完成授权。")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+
                         HStack {
                             Button("保存") {
                                 viewModel.saveDraft()
@@ -72,8 +83,12 @@ public struct ConfigEditorView: View {
 
                             Spacer()
 
-                            Button("同步到选中仓库") {
-                                viewModel.syncSelected()
+                            Button(viewModel.isAuthenticated ? "同步到选中仓库" : "登录 GitHub 后同步") {
+                                if viewModel.isAuthenticated {
+                                    viewModel.syncSelected()
+                                } else {
+                                    viewModel.signIn()
+                                }
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(viewModel.isSyncing)

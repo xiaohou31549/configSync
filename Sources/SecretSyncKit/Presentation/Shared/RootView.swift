@@ -8,13 +8,7 @@ public struct RootView: View {
     }
 
     public var body: some View {
-        Group {
-            if viewModel.session == nil {
-                LoginView(viewModel: viewModel)
-            } else {
-                MainDashboardView(viewModel: viewModel)
-            }
-        }
+        MainDashboardView(viewModel: viewModel)
         .frame(minWidth: 1180, minHeight: 760)
         .task {
             await viewModel.restoreSession()
@@ -44,8 +38,14 @@ private struct MainDashboardView: View {
         .navigationSplitViewStyle(.balanced)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("退出登录") {
-                    viewModel.signOut()
+                if viewModel.isAuthenticated {
+                    Button("退出登录") {
+                        viewModel.signOut()
+                    }
+                } else {
+                    Button("登录 GitHub") {
+                        viewModel.signIn()
+                    }
                 }
             }
         }
