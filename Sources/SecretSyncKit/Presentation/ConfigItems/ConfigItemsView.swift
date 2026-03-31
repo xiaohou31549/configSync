@@ -16,6 +16,7 @@ public struct ConfigItemsView: View {
                 Button("新增") {
                     viewModel.createNewDraft()
                 }
+                .accessibilityIdentifier("config.newButton")
             }
 
             Picker("类型", selection: $viewModel.configTypeFilter) {
@@ -27,6 +28,7 @@ public struct ConfigItemsView: View {
 
             TextField("搜索配置名或描述", text: $viewModel.configSearchText)
                 .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("config.searchField")
 
             if viewModel.filteredConfigItems.isEmpty {
                 GroupBox("先创建或导入一组示例配置") {
@@ -40,11 +42,13 @@ public struct ConfigItemsView: View {
                                 viewModel.importSampleConfigItems()
                             }
                             .buttonStyle(.borderedProminent)
+                            .accessibilityIdentifier("config.importSampleButton")
 
                             Button("新建空白配置") {
                                 viewModel.createNewDraft()
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityIdentifier("config.blankDraftButton")
                         }
 
                         Text("示例会包含常见的部署 Secret 和构建 Variable，方便你先体验完整编辑流程。")
@@ -85,11 +89,13 @@ public struct ConfigItemsView: View {
                     .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityIdentifier("config.list")
             }
 
             Spacer(minLength: 0)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("config.panel")
     }
 }

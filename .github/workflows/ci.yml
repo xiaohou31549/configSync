@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "codex/**"
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选择 Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: 生成工程
+        run: ./scripts/generate_xcodeproj.sh
+
+      - name: 校验功能表
+        run: python3 scripts/validate_feature_list.py feature_list.json
+
+      - name: 校验文档事实
+        run: python3 scripts/doc_gardening.py --check
+
+      - name: 校验架构边界
+        run: ./scripts/check_architecture.sh
+
+      - name: 执行单元测试
+        run: xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination "platform=macOS" test

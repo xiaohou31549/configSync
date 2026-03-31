@@ -59,3 +59,19 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         BUNDLE_LOADER: ""
         TEST_HOST: ""
+        PRODUCT_NAME: SecretSyncKitTests
+        PRODUCT_MODULE_NAME: SecretSyncKitTests
+
+  SecretSyncUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: Tests/SecretSyncUITests
+    dependencies:
+      - target: SecretSync
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: SecretSync
+        PRODUCT_NAME: SecretSyncUITests
+        PRODUCT_MODULE_NAME: SecretSyncUITests

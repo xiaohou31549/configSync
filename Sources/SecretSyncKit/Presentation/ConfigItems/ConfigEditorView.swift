@@ -23,12 +23,14 @@ public struct ConfigEditorView: View {
                                     viewModel.signIn()
                                 }
                                 .buttonStyle(.borderedProminent)
+                                .accessibilityIdentifier("editor.loginButton")
 
                                 Button("配置 OAuth") {
                                     viewModel.loadAuthSettings()
                                     viewModel.showAuthSettings = true
                                 }
                                 .buttonStyle(.bordered)
+                                .accessibilityIdentifier("editor.oauthSettingsButton")
                             }
                         }
                     }
@@ -47,6 +49,7 @@ public struct ConfigEditorView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         TextField("名称，例如 VPS_HOST", text: $viewModel.draft.name)
                             .textFieldStyle(.roundedBorder)
+                            .accessibilityIdentifier("editor.nameField")
 
                         Picker("类型", selection: $viewModel.draft.type) {
                             ForEach(ConfigItemType.allCases) { type in
@@ -58,19 +61,23 @@ public struct ConfigEditorView: View {
                         if viewModel.draft.type == .secret && !revealSecret {
                             SecureField("Secret Value", text: $viewModel.draft.value)
                                 .textFieldStyle(.roundedBorder)
+                                .accessibilityIdentifier("editor.secretValueField")
                         } else {
                             TextField("Value", text: $viewModel.draft.value, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
                                 .lineLimit(3...8)
+                                .accessibilityIdentifier("editor.valueField")
                         }
 
                         if viewModel.draft.type == .secret {
                             Toggle("显示 Secret 明文", isOn: $revealSecret)
+                                .accessibilityIdentifier("editor.revealSecretToggle")
                         }
 
                         TextField("描述（可选）", text: $viewModel.draft.description, axis: .vertical)
                             .textFieldStyle(.roundedBorder)
                             .lineLimit(2...4)
+                            .accessibilityIdentifier("editor.descriptionField")
                     }
                 }
 
@@ -93,11 +100,13 @@ public struct ConfigEditorView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(viewModel.isSaving)
+                            .accessibilityIdentifier("editor.saveButton")
 
                             Button("删除") {
                                 viewModel.deleteSelectedItem()
                             }
                             .disabled(viewModel.selectedConfigItemID == nil)
+                            .accessibilityIdentifier("editor.deleteButton")
 
                             Spacer()
 
@@ -110,6 +119,7 @@ public struct ConfigEditorView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(viewModel.isSyncing)
+                            .accessibilityIdentifier("editor.syncButton")
                         }
                     }
                 }
@@ -124,5 +134,6 @@ public struct ConfigEditorView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("editor.panel")
     }
 }

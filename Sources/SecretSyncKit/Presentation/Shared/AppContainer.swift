@@ -8,6 +8,7 @@ public struct AppContainer: Sendable {
     public let deleteConfigItemUseCase: DeleteConfigItemUseCase
     public let syncConfigItemsUseCase: SyncConfigItemsUseCase
     public let authSettingsStore: any AuthSettingsStore
+    public let shouldRestoreSessionOnLaunch: Bool
 
     public init(
         signInUseCase: SignInUseCase,
@@ -16,7 +17,8 @@ public struct AppContainer: Sendable {
         saveConfigItemUseCase: SaveConfigItemUseCase,
         deleteConfigItemUseCase: DeleteConfigItemUseCase,
         syncConfigItemsUseCase: SyncConfigItemsUseCase,
-        authSettingsStore: any AuthSettingsStore
+        authSettingsStore: any AuthSettingsStore,
+        shouldRestoreSessionOnLaunch: Bool
     ) {
         self.signInUseCase = signInUseCase
         self.fetchRepositoriesUseCase = fetchRepositoriesUseCase
@@ -25,22 +27,44 @@ public struct AppContainer: Sendable {
         self.deleteConfigItemUseCase = deleteConfigItemUseCase
         self.syncConfigItemsUseCase = syncConfigItemsUseCase
         self.authSettingsStore = authSettingsStore
+        self.shouldRestoreSessionOnLaunch = shouldRestoreSessionOnLaunch
     }
 
     public static func bootstrap() -> AppContainer {
-        let configRepository: any ConfigRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
-        let authSettingsStore = FileAuthSettingsStore()
-        let authRepository = ConfigAwareAuthRepository()
-        let githubAuthRepository = GitHubAuthRepository()
-        let repositoryCatalog = ConfigAwareRepositoryCatalog(
-            client: GitHubAPIClient(authRepository: githubAuthRepository)
-        )
-        let syncExecutor = ConfigAwareSyncExecutor(
-            realExecutor: GitHubSyncExecutor(
-                client: GitHubActionsAPIClient(authRepository: githubAuthRepository),
-                encryptionService: PlaceholderSecretEncryptionService()
+        let runtime = HarnessRuntime.current()
+        let keychainStore = KeychainStore(service: runtime.keychainService)
+        let configRepository: any ConfigRepository
+
+        if runtime.useInMemoryStore {
+            configRepository = InMemoryConfigRepository()
+        } else if let databaseURL = runtime.databaseURL {
+            configRepository = (try? SQLiteConfigRepository(databaseURL: databaseURL, keychainStore: keychainStore)) ?? InMemoryConfigRepository()
+        } else {
+            configRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
+        }
+
+        let authSettingsStore = FileAuthSettingsStore(baseDirectoryOverride: runtime.authSettingsDirectory)
+        let authRepository: any AuthRepository
+        let repositoryCatalog: any RepositoryCatalog
+        let syncExecutor: any SyncExecutor
+
+        if runtime.useMockServices {
+            authRepository = MockGitHubAuthRepository()
+            repositoryCatalog = MockRepositoryCatalog()
+            syncExecutor = MockSyncExecutor()
+        } else {
+            let authService = GitHubAuthRepository(keychainStore: keychainStore)
+            authRepository = ConfigAwareAuthRepository(keychainStore: keychainStore)
+            repositoryCatalog = ConfigAwareRepositoryCatalog(
+                client: GitHubAPIClient(authRepository: authService)
             )
-        )
+            syncExecutor = ConfigAwareSyncExecutor(
+                realExecutor: GitHubSyncExecutor(
+                    client: GitHubActionsAPIClient(authRepository: authService),
+                    encryptionService: PlaceholderSecretEncryptionService()
+                )
+            )
+        }
 
         return AppContainer(
             signInUseCase: SignInUseCase(authRepository: authRepository),
@@ -49,7 +73,8 @@ public struct AppContainer: Sendable {
             saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: configRepository),
             deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
             syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor),
-            authSettingsStore: authSettingsStore
+            authSettingsStore: authSettingsStore,
+            shouldRestoreSessionOnLaunch: !runtime.skipSessionRestore
         )
     }
 }

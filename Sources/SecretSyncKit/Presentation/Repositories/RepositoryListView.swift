@@ -18,17 +18,20 @@ public struct RepositoryListView: View {
                         viewModel.signOut()
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("repository.signOutButton")
                 } else {
                     Button("登录 GitHub") {
                         viewModel.signIn()
                     }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("repository.loginButton")
                 }
             }
 
             if viewModel.isAuthenticated {
                 TextField("搜索仓库或 owner", text: $viewModel.repoSearchText)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("repository.searchField")
 
                 Picker("可见性", selection: $viewModel.repoVisibilityFilter) {
                     Text("全部").tag(RepoVisibility.all)
@@ -38,14 +41,17 @@ public struct RepositoryListView: View {
                 .pickerStyle(.segmented)
 
                 Toggle("显示已归档仓库", isOn: $viewModel.showArchivedRepositories)
+                    .accessibilityIdentifier("repository.archivedToggle")
 
                 HStack {
                     Button("全选可见项") {
                         viewModel.selectAllVisibleRepositories()
                     }
+                    .accessibilityIdentifier("repository.selectAllButton")
                     Button("清空") {
                         viewModel.clearRepositorySelection()
                     }
+                    .accessibilityIdentifier("repository.clearSelectionButton")
                 }
 
                 List(viewModel.filteredRepositories) { repo in
@@ -75,6 +81,7 @@ public struct RepositoryListView: View {
                     .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityIdentifier("repository.list")
 
                 Text("已选 \(viewModel.selectedRepoIDs.count) 个仓库")
                     .font(.footnote)
@@ -97,6 +104,7 @@ public struct RepositoryListView: View {
                             viewModel.signIn()
                         }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("repository.loginButton")
                     }
                 }
 
@@ -105,5 +113,6 @@ public struct RepositoryListView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("repository.panel")
     }
 }

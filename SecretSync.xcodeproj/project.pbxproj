@@ -3,21 +3,36 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		52F3A7942A3F2D245A9542BF /* SecretSyncUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E1A04A349E0457E3B0B8E50 /* SecretSyncUITests.swift */; };
+		55624D40E4763B394140D338 /* HarnessRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0DFE4583236787B877C4C1 /* HarnessRuntimeTests.swift */; };
 		A86A2C9EF489BCF6FAB51157 /* SecretSyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5E4F467F7102DE0998D28831 /* SecretSyncKit */; };
 		BA6B09768F03AF5408C98487 /* SecretSyncKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9899518CAA78ED925DDCF34D /* SecretSyncKitTests.swift */; };
 		C1EA4EA0EF1F965F705C69CD /* SecretSyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 330851F2C3EBFDA39C04E64B /* SecretSyncKit */; };
 		C276A966730376A84FAD062D /* SecretSyncApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D3A5F7647ECA9318846AEE /* SecretSyncApp.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		582E61090BA818B4B8B290A7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA8154B2DB1D4CA3C1EF2E09 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 548BC0A44BC5F9D28D7A6B1B;
+			remoteInfo = SecretSync;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		03790B5CA71A298D134E9594 /* SecretSyncUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SecretSyncUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		150784348A19CDB36914D9B7 /* SecretSync */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SecretSync; path = .; sourceTree = SOURCE_ROOT; };
 		45D3A5F7647ECA9318846AEE /* SecretSyncApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncApp.swift; sourceTree = "<group>"; };
+		6E1A04A349E0457E3B0B8E50 /* SecretSyncUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncUITests.swift; sourceTree = "<group>"; };
 		79FBFF94F2B6DE5945D49FBB /* SecretSync.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecretSync.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8448FA8A2AE64AD1BCF3CE24 /* SecretSyncKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = SecretSyncKitTests.xctest; path = SecretSync.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D0DFE4583236787B877C4C1 /* HarnessRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarnessRuntimeTests.swift; sourceTree = "<group>"; };
+		8448FA8A2AE64AD1BCF3CE24 /* SecretSyncKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SecretSyncKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9899518CAA78ED925DDCF34D /* SecretSyncKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncKitTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -75,6 +90,14 @@
 			path = SecretSyncApp;
 			sourceTree = "<group>";
 		};
+		D41FCAC56CACB5F4491E2309 /* SecretSyncUITests */ = {
+			isa = PBXGroup;
+			children = (
+				6E1A04A349E0457E3B0B8E50 /* SecretSyncUITests.swift */,
+			);
+			path = SecretSyncUITests;
+			sourceTree = "<group>";
+		};
 		DF9530B953D6F6F64E35ACF7 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
@@ -87,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				F1BD6973DC4709E75E8AAA1F /* SecretSyncKitTests */,
+				D41FCAC56CACB5F4491E2309 /* SecretSyncUITests */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -94,6 +118,7 @@
 		F1BD6973DC4709E75E8AAA1F /* SecretSyncKitTests */ = {
 			isa = PBXGroup;
 			children = (
+				7D0DFE4583236787B877C4C1 /* HarnessRuntimeTests.swift */,
 				9899518CAA78ED925DDCF34D /* SecretSyncKitTests.swift */,
 			);
 			path = SecretSyncKitTests;
@@ -104,6 +129,7 @@
 			children = (
 				79FBFF94F2B6DE5945D49FBB /* SecretSync.app */,
 				8448FA8A2AE64AD1BCF3CE24 /* SecretSyncKitTests.xctest */,
+				03790B5CA71A298D134E9594 /* SecretSyncUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -149,6 +175,24 @@
 			productReference = 8448FA8A2AE64AD1BCF3CE24 /* SecretSyncKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		D269C68283F838E892A31B2F /* SecretSyncUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 58165A1D23B00759EE8DDABD /* Build configuration list for PBXNativeTarget "SecretSyncUITests" */;
+			buildPhases = (
+				4EA33BD7E767630F302F0D67 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D3638E03C0581E4039F47302 /* PBXTargetDependency */,
+			);
+			name = SecretSyncUITests;
+			packageProductDependencies = (
+			);
+			productName = SecretSyncUITests;
+			productReference = 03790B5CA71A298D134E9594 /* SecretSyncUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -159,11 +203,17 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					548BC0A44BC5F9D28D7A6B1B = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					86874B81C6E78057FF469C0A = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
+					};
+					D269C68283F838E892A31B2F = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = 548BC0A44BC5F9D28D7A6B1B;
 					};
 				};
 			};
@@ -180,16 +230,26 @@
 			packageReferences = (
 				779D88EDB2EF73321701347D /* XCLocalSwiftPackageReference "." */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				548BC0A44BC5F9D28D7A6B1B /* SecretSync */,
 				86874B81C6E78057FF469C0A /* SecretSyncKitTests */,
+				D269C68283F838E892A31B2F /* SecretSyncUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4EA33BD7E767630F302F0D67 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52F3A7942A3F2D245A9542BF /* SecretSyncUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6CDEECA118C80E977BA30B50 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -202,11 +262,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				55624D40E4763B394140D338 /* HarnessRuntimeTests.swift in Sources */,
 				BA6B09768F03AF5408C98487 /* SecretSyncKitTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D3638E03C0581E4039F47302 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 548BC0A44BC5F9D28D7A6B1B /* SecretSync */;
+			targetProxy = 582E61090BA818B4B8B290A7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		092755AF020725D4DE1863A5 /* Release */ = {
@@ -220,6 +289,8 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
+				PRODUCT_MODULE_NAME = SecretSyncKitTests;
+				PRODUCT_NAME = SecretSyncKitTests;
 				SDKROOT = macosx;
 				TEST_HOST = "";
 			};
@@ -230,20 +301,33 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4374YTC7UU;
-				INFOPLIST_KEY_CFBundleDisplayName = SecretSync;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 xiaohou31549";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.houji.secretSync;
 				PRODUCT_MODULE_NAME = SecretSyncApp;
 				SDKROOT = macosx;
 			};
 			name = Debug;
+		};
+		4A283E1F91ED16264D5D1279 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_MODULE_NAME = SecretSyncUITests;
+				PRODUCT_NAME = SecretSyncUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = SecretSync;
+			};
+			name = Release;
 		};
 		71D2488C1B5683CD73E0C6CE /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -313,6 +397,24 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
+		};
+		91DEDAA362864EE2EC5CD05B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_MODULE_NAME = SecretSyncUITests;
+				PRODUCT_NAME = SecretSyncUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = SecretSync;
+			};
+			name = Debug;
 		};
 		DE8DA25BDE3274DCFBF9B53B /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -401,6 +503,8 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
+				PRODUCT_MODULE_NAME = SecretSyncKitTests;
+				PRODUCT_NAME = SecretSyncKitTests;
 				SDKROOT = macosx;
 				TEST_HOST = "";
 			};
@@ -411,16 +515,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4374YTC7UU;
-				INFOPLIST_KEY_CFBundleDisplayName = SecretSync;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 xiaohou31549";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.houji.secretSync;
 				PRODUCT_MODULE_NAME = SecretSyncApp;
 				SDKROOT = macosx;
 			};
@@ -434,6 +533,15 @@
 			buildConfigurations = (
 				DE8DA25BDE3274DCFBF9B53B /* Debug */,
 				71D2488C1B5683CD73E0C6CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		58165A1D23B00759EE8DDABD /* Build configuration list for PBXNativeTarget "SecretSyncUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				91DEDAA362864EE2EC5CD05B /* Debug */,
+				4A283E1F91ED16264D5D1279 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

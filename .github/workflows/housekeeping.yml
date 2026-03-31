@@ -1,0 +1,33 @@
+name: Housekeeping
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  cleanup-scan:
+    runs-on: macos-15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成报告
+        run: ./scripts/housekeeping_scan.sh build/housekeeping-report.txt
+
+      - name: 创建后台清理 PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: codex/housekeeping
+          commit-message: "chore(engineering): 更新后台清理报告"
+          title: "chore(engineering): 更新后台清理报告"
+          body: |
+            这是后台垃圾回收任务自动生成的 PR。
+
+            本次更新只刷新 `build/housekeeping-report.txt`，用于暴露需要小步修复的偏差项。
+
+            后续可基于报告逐项拆小 PR，而不是长期积压技术债。
+          add-paths: |
+            build/housekeeping-report.txt

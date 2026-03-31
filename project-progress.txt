@@ -1,0 +1,10 @@
+[2026-03-31 10:00 CST] Harness 基线建立
+- 建立 AGENTS.md 目录索引与 docs/ 一级事实来源结构。
+- 计划新增 init.sh、feature_list.json、文档园丁、架构边界检查、CI 和 macOS UI 自动化。
+- 当前尚未完成验证，后续班次应先运行 ./init.sh 与全部校验脚本。
+
+[2026-03-31 16:20 CST] Harness 第一轮落地完成
+- 已新增 `init.sh`、`feature_list.json`、`scripts/doc_gardening.py`、`scripts/check_architecture.sh`、`scripts/run_ui_tests.sh`、`scripts/housekeeping_scan.sh` 和 GitHub Actions 工作流。
+- 已把 Harness 环境注入收敛到 `HarnessRuntime`，并为关键 SwiftUI 控件补充可访问性标识。
+- 已新增 macOS `XCUITest` 冒烟用例骨架，但默认不进入阻塞 CI；运行它需要提供 `TEAM_ID` 解决本机签名与 Runner 装载问题。
+- 已验证通过：`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`、`xcodebuild ... test`、`NO_LAUNCH=1 ./init.sh`。

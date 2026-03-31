@@ -1,0 +1,56 @@
+[
+  {
+    "id": "auth-oauth-loopback-login",
+    "title": "GitHub OAuth 回环登录",
+    "priority": 1,
+    "area": "auth",
+    "description": "用户可通过浏览器授权回到本机回调地址完成登录，并建立本地会话。",
+    "verification": "单元测试覆盖配置加载；后续增加登录 UI 自动化或受控集成验证。",
+    "passes": false
+  },
+  {
+    "id": "repo-fetch-filter-select",
+    "title": "仓库拉取、筛选与多选",
+    "priority": 1,
+    "area": "repositories",
+    "description": "用户可查看仓库、按搜索和可见性筛选，并批量选择目标仓库。",
+    "verification": "单元测试 + UI 冒烟校验筛选和选择路径。",
+    "passes": false
+  },
+  {
+    "id": "config-local-editing",
+    "title": "本地 Secret 与 Variable 编辑",
+    "priority": 1,
+    "area": "config",
+    "description": "用户可以新增、编辑、删除本地配置项，并在 Secret 与 Variable 之间切换。",
+    "verification": "仓储单元测试 + UI 自动化校验新增与保存流程。",
+    "passes": false
+  },
+  {
+    "id": "sync-selected-items",
+    "title": "同步选中配置到选中仓库",
+    "priority": 1,
+    "area": "sync",
+    "description": "用户可将当前选中配置批量同步到选中的仓库，并看到成功失败摘要。",
+    "verification": "同步用例单元测试 + UI 自动化最小路径。",
+    "passes": false
+  },
+  {
+    "id": "oauth-settings-persistence",
+    "title": "OAuth 本地配置保存",
+    "priority": 2,
+    "area": "settings",
+    "description": "用户可在应用中维护 OAuth Client 配置并读回本地文件。",
+    "verification": "单元测试覆盖文件读写；后续补 UI 表单校验。",
+    "passes": false
+  },
+  {
+    "id": "harness-engineering-baseline",
+    "title": "Harness Engineering 基线",
+    "priority": 1,
+    "area": "engineering",
+    "description": "仓库具备 AGENTS 索引、docs 事实来源、初始化脚本、功能表、进度日志、架构检查、文档园丁、CI 和后台清理任务。",
+    "verification": "脚本校验 + CI 工作流 + 文档与代码结构检查。",
+    "passes": false
+  }
+]

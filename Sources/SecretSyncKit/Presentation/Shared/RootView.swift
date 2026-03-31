@@ -2,8 +2,10 @@ import SwiftUI
 
 public struct RootView: View {
     @StateObject private var viewModel: AppViewModel
+    private let container: AppContainer
 
     public init(container: AppContainer) {
+        self.container = container
         _viewModel = StateObject(wrappedValue: AppViewModel(container: container))
     }
 
@@ -17,6 +19,7 @@ public struct RootView: View {
         )
         #endif
         .task {
+            guard container.shouldRestoreSessionOnLaunch else { return }
             await viewModel.restoreSession()
         }
         .alert("提示", isPresented: Binding(
@@ -45,5 +48,6 @@ private struct MainDashboardView: View {
                 .frame(minWidth: 540, idealWidth: 720, maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("root.dashboard")
     }
 }
