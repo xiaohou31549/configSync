@@ -8,3 +8,8 @@
 - 已把 Harness 环境注入收敛到 `HarnessRuntime`，并为关键 SwiftUI 控件补充可访问性标识。
 - 已新增 macOS `XCUITest` 冒烟用例骨架，但默认不进入阻塞 CI；运行它需要提供 `TEAM_ID` 解决本机签名与 Runner 装载问题。
 - 已验证通过：`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`、`xcodebuild ... test`、`NO_LAUNCH=1 ./init.sh`。
+
+[2026-03-31 22:12 CST] App icon 已创建并接入
+- 已新增 `Assets.xcassets/AppIcon.appiconset` 与图标生成脚本 `scripts/generate_app_icon.swift`，图标主题为“仓库堆叠 + 盾牌锁”。
+- 已在 `project.yml` 中声明 `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon`，重新生成工程后资源会自动进入应用目标。
+- 已验证通过：`swift scripts/generate_app_icon.swift`、`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -configuration Debug -destination 'platform=macOS' -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages build`，并确认产物包含 `Contents/Resources/AppIcon.icns`、`Contents/Resources/Assets.car`，且 `Info.plist` 含 `CFBundleIconName=AppIcon`。

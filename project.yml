@@ -39,6 +39,7 @@ targets:
         product: SecretSyncKit
     settings:
       base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
         PRODUCT_MODULE_NAME: SecretSyncApp
     scheme:

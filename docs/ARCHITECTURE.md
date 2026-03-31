@@ -29,7 +29,7 @@ _由 `python3 scripts/doc_gardening.py` 维护，请勿手改此区块。_
 - Swift tools version：6.0
 - macOS deployment target：14.0
 - Xcode targets：SecretSync, SecretSyncKitTests, SecretSyncUITests
-- Scripts：archive_release.sh, build_app.sh, check_architecture.sh, doc_gardening.py, generate_xcodeproj.sh, housekeeping_scan.sh, package_dmg.sh, run_ui_tests.sh, validate_feature_list.py
+- Scripts：archive_release.sh, build_app.sh, check_architecture.sh, doc_gardening.py, generate_app_icon.swift, generate_xcodeproj.sh, housekeeping_scan.sh, package_dmg.sh, run_ui_tests.sh, validate_feature_list.py
 - Docs：ARCHITECTURE.md, DATABASE_SCHEMA.md, EXECUTION_PLAN.md, HARNESS_ENGINEERING.md, PRODUCT_SPEC.md, README.md, TESTING_STRATEGY.md
 - 关键校验入口：`./init.sh`、`./scripts/check_architecture.sh`、`python3 scripts/validate_feature_list.py feature_list.json`
 <!-- GENERATED:END -->

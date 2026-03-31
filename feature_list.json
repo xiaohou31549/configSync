@@ -52,5 +52,14 @@
     "description": "仓库具备 AGENTS 索引、docs 事实来源、初始化脚本、功能表、进度日志、架构检查、文档园丁、CI 和后台清理任务。",
     "verification": "脚本校验 + CI 工作流 + 文档与代码结构检查。",
     "passes": false
+  },
+  {
+    "id": "app-icon-design-integration",
+    "title": "创建并集成应用图标",
+    "priority": 2,
+    "area": "branding",
+    "description": "为 SecretSync 设计一套符合 macOS 桌面应用风格的 App icon，并完成 Xcode 资源集成，使应用在构建产物与系统界面中显示正式图标。",
+    "verification": "补充图标资源后通过构建检查资源编译，并人工确认 App、Dock 与 Finder 中显示正确图标。",
+    "passes": true
   }
 ]
