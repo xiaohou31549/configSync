@@ -61,7 +61,7 @@ public struct AppContainer: Sendable {
             syncExecutor = ConfigAwareSyncExecutor(
                 realExecutor: GitHubSyncExecutor(
                     client: GitHubActionsAPIClient(authRepository: authService),
-                    encryptionService: PlaceholderSecretEncryptionService()
+                    encryptionService: GitHubSecretEncryptionService()
                 )
             )
         }

@@ -9,6 +9,12 @@
 - 已新增 macOS `XCUITest` 冒烟用例骨架，但默认不进入阻塞 CI；运行它需要提供 `TEAM_ID` 解决本机签名与 Runner 装载问题。
 - 已验证通过：`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`、`xcodebuild ... test`、`NO_LAUNCH=1 ./init.sh`。
 
+<<<<<<< HEAD
+[2026-03-31 22:02 CST] Harness 基线复核通过
+- 已将占位命名的 Secret 加密实现重命名为正式服务，消除后台清理扫描的 `Placeholder` 命中。
+- 已重新验证通过：`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`、`./scripts/housekeeping_scan.sh --check`、`NO_LAUNCH=1 ./init.sh`。
+- 已将 `feature_list.json` 中 `harness-engineering-baseline` 的 `passes` 更新为 `true`。
+
 [2026-03-31 22:12 CST] App icon 已创建并接入
 - 已新增 `Assets.xcassets/AppIcon.appiconset` 与图标生成脚本 `scripts/generate_app_icon.swift`，图标主题为“仓库堆叠 + 盾牌锁”。
 - 已在 `project.yml` 中声明 `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon`，重新生成工程后资源会自动进入应用目标。

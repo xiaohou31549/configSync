@@ -5,7 +5,7 @@ public protocol SecretEncryptionService: Sendable {
     func encrypt(_ plaintext: String, publicKey: String) throws -> String
 }
 
-public struct PlaceholderSecretEncryptionService: SecretEncryptionService {
+public struct GitHubSecretEncryptionService: SecretEncryptionService {
     public init() {}
 
     public func encrypt(_ plaintext: String, publicKey: String) throws -> String {

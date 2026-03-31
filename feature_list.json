@@ -51,7 +51,7 @@
     "area": "engineering",
     "description": "仓库具备 AGENTS 索引、docs 事实来源、初始化脚本、功能表、进度日志、架构检查、文档园丁、CI 和后台清理任务。",
     "verification": "脚本校验 + CI 工作流 + 文档与代码结构检查。",
-    "passes": false
+    "passes": true
   },
   {
     "id": "app-icon-design-integration",

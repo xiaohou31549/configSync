@@ -69,7 +69,7 @@ func repositoryTargetParsing() async throws {
                 )
             )
         ),
-        encryptionService: PlaceholderSecretEncryptionService()
+        encryptionService: GitHubSecretEncryptionService()
     )
 
     let summary = try await syncExecutor.sync(
