@@ -21,11 +21,10 @@ fi
 
 xcodebuild \
   -project "$PROJECT_PATH" \
-  -scheme SecretSync \
+  -scheme SecretSyncUITests \
   -destination "platform=macOS" \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_DIR" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   CODE_SIGN_STYLE=Automatic \
-  test \
-  -only-testing:SecretSyncUITests
+  test
