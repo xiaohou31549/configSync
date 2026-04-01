@@ -1,47 +1,130 @@
 [
   {
-    "id": "auth-oauth-loopback-login",
-    "title": "GitHub OAuth 回环登录",
-    "priority": 1,
-    "area": "auth",
-    "description": "用户可通过浏览器授权回到本机回调地址完成登录，并建立本地会话。",
-    "verification": "单元测试覆盖配置加载；后续增加登录 UI 自动化或受控集成验证。",
-    "passes": false
-  },
-  {
-    "id": "repo-fetch-filter-select",
-    "title": "仓库拉取、筛选与多选",
-    "priority": 1,
-    "area": "repositories",
-    "description": "用户可查看仓库、按搜索和可见性筛选，并批量选择目标仓库。",
-    "verification": "单元测试 + UI 冒烟校验筛选和选择路径。",
-    "passes": false
-  },
-  {
-    "id": "config-local-editing",
-    "title": "本地 Secret 与 Variable 编辑",
+    "id": "secret-local-store-foundation",
+    "title": "本地 Secret 存储与列表基础",
     "priority": 1,
     "area": "config",
-    "description": "用户可以新增、编辑、删除本地配置项，并在 Secret 与 Variable 之间切换。",
-    "verification": "仓储单元测试 + UI 自动化校验新增与保存流程。",
+    "epic": "secret-local-editing",
+    "depends_on": [],
+    "description": "建立本地 Secret 实体、仓储与列表读取能力，支持应用内查看已有 Secret，为后续新增、编辑、删除和同步提供统一数据来源。",
+    "verification": "仓储与用例单元测试覆盖新增后读回、空列表、持久化恢复；必要时补最小 UI 冒烟确认列表展示。",
     "passes": false
   },
   {
-    "id": "sync-selected-items",
-    "title": "同步选中配置到选中仓库",
+    "id": "secret-create-edit-flow",
+    "title": "本地 Secret 新增与编辑",
     "priority": 1,
+    "area": "config",
+    "epic": "secret-local-editing",
+    "depends_on": [
+      "secret-local-store-foundation"
+    ],
+    "description": "用户可新建本地 Secret，并对已有 Secret 执行编辑保存；表单需覆盖名称、值和基础校验。",
+    "verification": "单元测试覆盖保存与重复名校验，XCUITest 覆盖新增、修改、保存后的列表回显。",
+    "passes": false
+  },
+  {
+    "id": "secret-delete-flow",
+    "title": "本地 Secret 删除",
+    "priority": 1,
+    "area": "config",
+    "epic": "secret-local-editing",
+    "depends_on": [
+      "secret-local-store-foundation"
+    ],
+    "description": "用户可删除本地 Secret，并在列表中即时移除；删除行为需保证状态与持久化一致。",
+    "verification": "单元测试覆盖删除与不存在目标的处理，XCUITest 覆盖列表删除路径。",
+    "passes": false
+  },
+  {
+    "id": "github-oauth-login-session",
+    "title": "GitHub OAuth 登录与会话建立",
+    "priority": 1,
+    "area": "auth",
+    "epic": "github-repository-linkage",
+    "depends_on": [],
+    "description": "用户可通过浏览器完成 GitHub OAuth 授权，应用接收回环回调并建立本地会话，供后续仓库查询与同步使用。",
+    "verification": "单元测试覆盖配置加载、回调参数解析与会话存储；受控环境下补最小登录路径验证。",
+    "passes": false
+  },
+  {
+    "id": "github-repo-fetch-search-select",
+    "title": "GitHub 仓库查询、搜索与多选",
+    "priority": 2,
+    "area": "repositories",
+    "epic": "github-repository-linkage",
+    "depends_on": [
+      "github-oauth-login-session"
+    ],
+    "description": "应用可拉取当前账号可访问的 GitHub 仓库，支持搜索、筛选与多选，为同步目标仓库选择提供基础。",
+    "verification": "单元测试覆盖仓库拉取与筛选逻辑，XCUITest 覆盖搜索和多选路径。",
+    "passes": false
+  },
+  {
+    "id": "github-sync-api-client",
+    "title": "GitHub Secret 同步 API 封装",
+    "priority": 2,
     "area": "sync",
-    "description": "用户可将当前选中配置批量同步到选中的仓库，并看到成功失败摘要。",
-    "verification": "同步用例单元测试 + UI 自动化最小路径。",
+    "epic": "github-repository-linkage",
+    "depends_on": [
+      "github-oauth-login-session"
+    ],
+    "description": "封装 GitHub Actions Secret 同步所需的 API 调用，包括仓库公钥获取、Secret 加密与上传结果解析。",
+    "verification": "同步客户端单元测试覆盖成功、鉴权失败、仓库公钥异常与上传失败分支。",
     "passes": false
   },
   {
     "id": "oauth-settings-persistence",
     "title": "OAuth 本地配置保存",
-    "priority": 2,
+    "priority": 3,
     "area": "settings",
-    "description": "用户可在应用中维护 OAuth Client 配置并读回本地文件。",
+    "epic": "github-repository-linkage",
+    "depends_on": [],
+    "description": "用户可在应用中维护 OAuth Client 配置并读回本地文件，减少每次运行前手工配置成本。",
     "verification": "单元测试覆盖文件读写；后续补 UI 表单校验。",
+    "passes": false
+  },
+  {
+    "id": "sync-selection-readiness",
+    "title": "同步前选择态与就绪校验",
+    "priority": 1,
+    "area": "sync",
+    "epic": "sync-secret-to-github",
+    "depends_on": [
+      "secret-local-store-foundation",
+      "github-repo-fetch-search-select"
+    ],
+    "description": "在用户发起同步前，统一校验已选 Secret、已选仓库和登录状态，明确哪些条件缺失时禁止执行同步。",
+    "verification": "用例单元测试覆盖未登录、未选 Secret、未选仓库等阻断条件，UI 冒烟覆盖按钮可用状态。",
+    "passes": false
+  },
+  {
+    "id": "sync-selected-secret-to-repos",
+    "title": "将选中 Secret 同步到选中仓库",
+    "priority": 1,
+    "area": "sync",
+    "epic": "sync-secret-to-github",
+    "depends_on": [
+      "secret-create-edit-flow",
+      "github-sync-api-client",
+      "github-repo-fetch-search-select",
+      "sync-selection-readiness"
+    ],
+    "description": "用户可将一个或多个选中的本地 Secret 批量同步到当前选中的 GitHub 仓库，形成主流程闭环。",
+    "verification": "同步用例单元测试覆盖批量执行与部分失败，XCUITest 覆盖从选中 Secret 到触发同步的最小路径。",
+    "passes": false
+  },
+  {
+    "id": "sync-result-summary-feedback",
+    "title": "同步结果摘要与失败反馈",
+    "priority": 2,
+    "area": "sync",
+    "epic": "sync-secret-to-github",
+    "depends_on": [
+      "sync-selected-secret-to-repos"
+    ],
+    "description": "同步完成后展示成功、失败与失败原因摘要，便于用户确认哪些仓库已落地、哪些需要重试。",
+    "verification": "单元测试覆盖结果聚合，XCUITest 覆盖结果摘要展示与失败提示。",
     "passes": false
   },
   {
