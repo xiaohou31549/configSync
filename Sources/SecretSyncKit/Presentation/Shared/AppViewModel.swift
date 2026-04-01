@@ -78,6 +78,39 @@ public final class AppViewModel: ObservableObject {
         !configItems.isEmpty
     }
 
+    public var shouldUsePlaintextSecretEditorForAutomation: Bool {
+        container.shouldUsePlaintextSecretEditorForAutomation
+    }
+
+    public func loadInitialState(restoreSession: Bool) async {
+        loadAuthSettings()
+
+        do {
+            configItems = try await container.loadConfigItemsUseCase.execute()
+            if let selected = selectedConfigItemID,
+               let item = configItems.first(where: { $0.id == selected }) {
+                selectConfigItem(item)
+            } else if let first = filteredConfigItems.first {
+                selectConfigItem(first)
+            } else {
+                createNewDraft()
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        guard restoreSession else { return }
+
+        do {
+            session = try await container.signInUseCase.restoreSession()
+            if session != nil {
+                repositories = try await container.fetchRepositoriesUseCase.execute()
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func signIn() {
         isSigningIn = true
         errorMessage = nil
@@ -106,15 +139,7 @@ public final class AppViewModel: ObservableObject {
     }
 
     public func restoreSession() async {
-        loadAuthSettings()
-        do {
-            session = try await container.signInUseCase.restoreSession()
-            if session != nil {
-                await refreshAll()
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        await loadInitialState(restoreSession: true)
     }
 
     public func signOut() {
@@ -166,7 +191,7 @@ public final class AppViewModel: ObservableObject {
 
     public func createNewDraft() {
         selectedConfigItemID = nil
-        draft = ConfigItemDraft(type: configTypeFilter)
+        draft = ConfigItemDraft(type: .secret)
     }
 
     public func selectConfigItem(_ item: ConfigItem) {
@@ -263,33 +288,6 @@ public final class AppViewModel: ObservableObject {
         guard let url = authorizationURL else { return }
         NSWorkspace.shared.open(url)
 #endif
-    }
-
-    public func importSampleConfigItems() {
-        guard !hasConfigItems else { return }
-
-        Task {
-            do {
-                for item in SampleData.configItems {
-                    let draft = ConfigItemDraft(
-                        name: item.name,
-                        type: item.type,
-                        value: item.value,
-                        description: item.description ?? ""
-                    )
-                    _ = try await container.saveConfigItemUseCase.execute(draft)
-                }
-                configItems = try await container.loadConfigItemsUseCase.execute()
-                configTypeFilter = .secret
-                selectedConfigItemID = filteredConfigItems.first?.id
-                if let selected = selectedConfigItemID,
-                   let item = configItems.first(where: { $0.id == selected }) {
-                    selectConfigItem(item)
-                }
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
     }
 
     public func loadAuthSettings() {

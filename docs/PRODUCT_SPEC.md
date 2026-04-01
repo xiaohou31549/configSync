@@ -1,17 +1,21 @@
 # 产品规格
 
 ## 产品定位
-SecretSync 是一个 macOS 原生桌面工具，用于本地维护 GitHub Actions 的 Secrets / Variables，并将其批量同步到多个 GitHub 仓库。
+SecretSync 是一个 macOS 原生桌面工具，用于本地维护 GitHub Actions 的 Secrets，并将其批量同步到多个 GitHub 仓库。
 
 ## 当前范围
+- 第一版 MVP 聚焦本地 Secret 的增删改查
+- 新建 Secret 仅支持在应用内本地创建
 - GitHub 登录与会话恢复
 - 拉取用户可访问仓库
-- 本地维护 Secret / Variable
+- 本地维护 Secret
 - 按仓库搜索、筛选、多选
 - 批量同步并展示结果
 - OAuth 本地配置保存
 
 ## 非目标
+- 第一版不做从 GitHub 仓库导入 Secret
+- 第一版不做 Variable 管理
 - GitHub Workflow 编辑
 - 云端多端同步
 - 团队协作

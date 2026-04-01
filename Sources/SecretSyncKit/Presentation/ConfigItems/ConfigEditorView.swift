@@ -14,7 +14,7 @@ public struct ConfigEditorView: View {
                 if !viewModel.isAuthenticated {
                     GroupBox("准备同步时再登录") {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("你现在可以先编辑并保存本地配置。只有在读取 GitHub 仓库或执行同步时，才需要完成 GitHub 授权。")
+                            Text("你现在可以先编辑并保存本地 Secret。只有在读取 GitHub 仓库或执行同步时，才需要完成 GitHub 授权。")
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
 
@@ -47,18 +47,11 @@ public struct ConfigEditorView: View {
 
                 GroupBox("配置详情") {
                     VStack(alignment: .leading, spacing: 12) {
-                        TextField("名称，例如 VPS_HOST", text: $viewModel.draft.name)
+                        TextField("Secret 名称，例如 VPS_HOST", text: $viewModel.draft.name)
                             .textFieldStyle(.roundedBorder)
                             .accessibilityIdentifier("editor.nameField")
 
-                        Picker("类型", selection: $viewModel.draft.type) {
-                            ForEach(ConfigItemType.allCases) { type in
-                                Text(type.displayName).tag(type)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-
-                        if viewModel.draft.type == .secret && !revealSecret {
+                        if !revealSecret && !viewModel.shouldUsePlaintextSecretEditorForAutomation {
                             SecureField("Secret Value", text: $viewModel.draft.value)
                                 .textFieldStyle(.roundedBorder)
                                 .accessibilityIdentifier("editor.secretValueField")
@@ -69,10 +62,8 @@ public struct ConfigEditorView: View {
                                 .accessibilityIdentifier("editor.valueField")
                         }
 
-                        if viewModel.draft.type == .secret {
-                            Toggle("显示 Secret 明文", isOn: $revealSecret)
-                                .accessibilityIdentifier("editor.revealSecretToggle")
-                        }
+                        Toggle("显示 Secret 明文", isOn: $revealSecret)
+                            .accessibilityIdentifier("editor.revealSecretToggle")
 
                         TextField("描述（可选）", text: $viewModel.draft.description, axis: .vertical)
                             .textFieldStyle(.roundedBorder)
@@ -84,12 +75,12 @@ public struct ConfigEditorView: View {
                 GroupBox("同步操作") {
                     VStack(alignment: .leading, spacing: 12) {
                         Toggle("覆盖已存在同名配置", isOn: $viewModel.overwriteExisting)
-                        Text("同步范围：已选仓库 \(viewModel.selectedRepoIDs.count) 个；配置项 \(viewModel.selectedItemsForSync.count) 个。未在中栏选中具体项时，会同步当前类型筛选下的全部可见项。")
+                        Text("同步范围：已选仓库 \(viewModel.selectedRepoIDs.count) 个；Secret \(viewModel.selectedItemsForSync.count) 个。未在中栏选中具体项时，会同步当前列表中的全部本地 Secret。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
                         if !viewModel.isAuthenticated {
-                            Text("当前还未登录 GitHub。你可以先保存本地配置；当你准备读取仓库或开始同步时，再点击右侧按钮完成授权。")
+                            Text("当前还未登录 GitHub。你可以先保存本地 Secret；当你准备读取仓库或开始同步时，再点击右侧按钮完成授权。")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }

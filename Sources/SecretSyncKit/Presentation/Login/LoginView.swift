@@ -12,7 +12,7 @@ public struct LoginView: View {
             Text("SecretSync")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
 
-            Text("面向多仓库 GitHub Actions Secrets / Variables 的本地管理与批量同步工具。已切换到标准 OAuth 浏览器回调登录，授权完成后会通过本机 `127.0.0.1` 回调自动返回应用。")
+            Text("面向多仓库 GitHub Actions Secrets 的本地管理与批量同步工具。第一版 MVP 聚焦本地 Secret 的增删改查与同步，授权完成后会通过本机 `127.0.0.1` 回调自动返回应用。")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 

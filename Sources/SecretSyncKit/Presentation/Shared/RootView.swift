@@ -19,8 +19,7 @@ public struct RootView: View {
         )
         #endif
         .task {
-            guard container.shouldRestoreSessionOnLaunch else { return }
-            await viewModel.restoreSession()
+            await viewModel.loadInitialState(restoreSession: container.shouldRestoreSessionOnLaunch)
         }
         .alert("提示", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
