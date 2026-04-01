@@ -65,7 +65,9 @@ public final class AppViewModel: ObservableObject {
     }
 
     public var selectedItemsForSync: [ConfigItem] {
-        if let selectedConfigItemID, let item = configItems.first(where: { $0.id == selectedConfigItemID }) {
+        if showConfigEditor,
+           let selectedConfigItemID,
+           let item = configItems.first(where: { $0.id == selectedConfigItemID }) {
             return [item]
         }
         return filteredConfigItems
@@ -95,8 +97,6 @@ public final class AppViewModel: ObservableObject {
             if let selected = selectedConfigItemID,
                let item = configItems.first(where: { $0.id == selected }) {
                 selectConfigItem(item, presentEditor: false)
-            } else if let first = filteredConfigItems.first {
-                selectConfigItem(first, presentEditor: false)
             } else {
                 createNewDraft(presentEditor: false)
             }
@@ -175,10 +175,6 @@ public final class AppViewModel: ObservableObject {
             async let items = container.loadConfigItemsUseCase.execute()
             repositories = try await repos
             configItems = try await items
-
-            if selectedConfigItemID == nil {
-                selectedConfigItemID = filteredConfigItems.first?.id
-            }
 
             if let selected = selectedConfigItemID, let item = configItems.first(where: { $0.id == selected }) {
                 selectConfigItem(item, presentEditor: false)

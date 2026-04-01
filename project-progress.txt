@@ -30,3 +30,9 @@
 - 已安装 `im-select`，并将 `scripts/run_ui_tests.sh` 更新为在执行前自动切换到系统输入法 `com.apple.keylayout.ABC`，退出后恢复原输入法。
 - 此修改用于规避 macOS `XCUITest` 通过 `testmanagerd` 模拟输入时，第三方输入法触发的隐私授权弹窗；在当前环境中，原始输入法为 `com.tencent.inputmethod.wetype.pinyin`，脚本可正确切换并恢复。
 - 已验证通过：`TEAM_ID=4374YTC7UU ./scripts/run_ui_tests.sh`，本地 Secret CRUD 的 UI 用例通过，且本轮日志中未再出现 `com.apple.systempreferences` 中断窗口。
+
+[2026-04-01 16:10 CST] 修复 Code Review 的同步范围与 PID 工件问题
+- 已修复 `AppViewModel`：仅在编辑器打开时才按单个选中 Secret 同步；初始化与刷新不再默认选中首项，避免“同步全部”被意外降级为首条。
+- 已补充单元测试，覆盖“编辑器关闭时同步范围应为过滤列表”。
+- 已删除误提交的 `.harness/app.pid`，并将 `.harness/*.pid`、`.harness/*.log` 加入 `.gitignore`，避免运行时工件再次入库。
+- 验证结果：`python3 scripts/validate_feature_list.py feature_list.json`、`bash scripts/check_architecture.sh` 通过；`xcodebuild ... test` 因环境缺少 `xcodebuild` 未执行。

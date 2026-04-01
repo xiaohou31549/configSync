@@ -166,3 +166,31 @@ func authSettingsStoreRoundTrip() throws {
     #expect(loaded?.clientSecret == "client-secret")
     #expect(loaded?.callbackPath == "/oauth/callback")
 }
+
+@Test("未打开编辑器时同步范围应为过滤结果而非默认首项")
+@MainActor
+func appViewModelSyncScopeUsesFilteredItemsWhenEditorClosed() async throws {
+    let first = ConfigItem(name: "FIRST_SECRET", type: .secret, value: "a")
+    let second = ConfigItem(name: "SECOND_SECRET", type: .secret, value: "b")
+    let repository = InMemoryConfigRepository(seedItems: [first, second])
+    let settingsRoot = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: settingsRoot, withIntermediateDirectories: true)
+    let container = AppContainer(
+        signInUseCase: SignInUseCase(authRepository: MockGitHubAuthRepository()),
+        fetchRepositoriesUseCase: FetchRepositoriesUseCase(repositoryCatalog: MockRepositoryCatalog()),
+        loadConfigItemsUseCase: LoadConfigItemsUseCase(configRepository: repository),
+        saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: repository),
+        deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: repository),
+        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: MockSyncExecutor()),
+        authSettingsStore: FileAuthSettingsStore(baseDirectoryOverride: settingsRoot),
+        shouldRestoreSessionOnLaunch: false,
+        shouldUsePlaintextSecretEditorForAutomation: true
+    )
+    let viewModel = AppViewModel(container: container)
+
+    await viewModel.loadInitialState(restoreSession: false)
+
+    #expect(viewModel.selectedConfigItemID == nil)
+    #expect(viewModel.showConfigEditor == false)
+    #expect(viewModel.selectedItemsForSync.count == 2)
+}
