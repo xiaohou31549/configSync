@@ -35,4 +35,11 @@ jobs:
         run: ./scripts/check_architecture.sh
 
       - name: 执行单元测试
-        run: xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination "platform=macOS" test
+        run: |
+          xcodebuild \
+            -project SecretSync.xcodeproj \
+            -scheme SecretSync \
+            -destination "platform=macOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            test
