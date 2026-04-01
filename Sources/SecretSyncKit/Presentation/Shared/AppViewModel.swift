@@ -4,6 +4,26 @@ import SwiftUI
 import AppKit
 #endif
 
+public enum SyncReadiness: Equatable, Sendable {
+    case ready
+    case requiresAuthentication
+    case requiresRepositorySelection
+    case requiresConfigSelection
+
+    public var message: String {
+        switch self {
+        case .ready:
+            "可以开始同步到选中仓库"
+        case .requiresAuthentication:
+            "同步前需要先登录 GitHub"
+        case .requiresRepositorySelection:
+            "同步前至少选择一个仓库"
+        case .requiresConfigSelection:
+            "同步前至少选择一个配置项"
+        }
+    }
+}
+
 @MainActor
 public final class AppViewModel: ObservableObject {
     @Published public private(set) var session: UserSession?
@@ -29,7 +49,7 @@ public final class AppViewModel: ObservableObject {
     @Published public var showAuthSettings = false
     @Published public var authSettingsDraft = GitHubAuthSettingsDraft()
     @Published public var authSettingsLocation = ""
-    @Published public var hasSavedOAuthConfiguration = false
+    @Published public var hasSavedGitHubAppConfiguration = false
     @Published public var isSavingAuthSettings = false
 
     private let container: AppContainer
@@ -40,9 +60,10 @@ public final class AppViewModel: ObservableObject {
 
     public var filteredRepositories: [Repo] {
         repositories.filter { repo in
-            let matchesSearch = repoSearchText.isEmpty ||
-                repo.fullName.localizedCaseInsensitiveContains(repoSearchText) ||
-                repo.owner.localizedCaseInsensitiveContains(repoSearchText)
+            let searchText = repoSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let matchesSearch = searchText.isEmpty ||
+                repo.fullName.lowercased().contains(searchText) ||
+                repo.owner.lowercased().contains(searchText)
             let matchesVisibility = repoVisibilityFilter == .all || repo.visibility == repoVisibilityFilter
             let matchesArchived = showArchivedRepositories || !repo.archived
             return matchesSearch && matchesVisibility && matchesArchived
@@ -51,10 +72,11 @@ public final class AppViewModel: ObservableObject {
 
     public var filteredConfigItems: [ConfigItem] {
         configItems.filter { item in
+            let searchText = configSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let matchesType = item.type == configTypeFilter
-            let matchesSearch = configSearchText.isEmpty ||
-                item.name.localizedCaseInsensitiveContains(configSearchText) ||
-                (item.description?.localizedCaseInsensitiveContains(configSearchText) ?? false)
+            let matchesSearch = searchText.isEmpty ||
+                item.name.lowercased().contains(searchText) ||
+                (item.description?.lowercased().contains(searchText) ?? false)
             return matchesType && matchesSearch
         }
     }
@@ -76,6 +98,26 @@ public final class AppViewModel: ObservableObject {
 
     public var hasConfigItems: Bool {
         !configItems.isEmpty
+    }
+
+    public var syncReadiness: SyncReadiness {
+        if !isAuthenticated {
+            return .requiresAuthentication
+        }
+
+        if selectedRepos.isEmpty {
+            return .requiresRepositorySelection
+        }
+
+        if selectedItemsForSync.isEmpty {
+            return .requiresConfigSelection
+        }
+
+        return .ready
+    }
+
+    public var canSyncSelection: Bool {
+        syncReadiness == .ready && !isSyncing
     }
 
     public func signIn() {
@@ -233,9 +275,8 @@ public final class AppViewModel: ObservableObject {
     }
 
     public func syncSelected() {
-        guard isAuthenticated else {
-            authProgressMessage = "同步前需要先登录 GitHub，登录后即可加载仓库并执行同步"
-            signIn()
+        guard syncReadiness == .ready else {
+            authProgressMessage = syncReadiness.message
             return
         }
 
@@ -296,7 +337,7 @@ public final class AppViewModel: ObservableObject {
         do {
             authSettingsDraft = try container.authSettingsStore.loadDraft() ?? GitHubAuthSettingsDraft()
             authSettingsLocation = try container.authSettingsStore.settingsLocation().path()
-            hasSavedOAuthConfiguration = authSettingsDraft.isValid
+            hasSavedGitHubAppConfiguration = authSettingsDraft.isValid
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -312,7 +353,7 @@ public final class AppViewModel: ObservableObject {
             do {
                 try container.authSettingsStore.saveDraft(authSettingsDraft)
                 loadAuthSettings()
-                authProgressMessage = "OAuth 配置已保存，可以直接重新点击登录"
+                authProgressMessage = "GitHub App 配置已保存，Client Secret 已写入 Keychain"
                 showAuthSettings = false
             } catch {
                 errorMessage = error.localizedDescription
@@ -324,8 +365,8 @@ public final class AppViewModel: ObservableObject {
         do {
             try container.authSettingsStore.removeDraft()
             authSettingsDraft = GitHubAuthSettingsDraft()
-            hasSavedOAuthConfiguration = false
-            authProgressMessage = "已清除本地 OAuth 配置，当前会回退到 mock 登录"
+            hasSavedGitHubAppConfiguration = false
+            authProgressMessage = "已清除本地 GitHub App 配置，并从 Keychain 删除 Client Secret"
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -30,6 +30,6 @@
 - 由于 macOS UI 测试依赖签名与 Runner 装载，默认 CI 不阻塞它，使用 `scripts/run_ui_tests.sh` 作为独立入口
 
 ## 何时使用浏览器工具
-- 验证 OAuth 授权地址是否生成正确
+- 验证 GitHub App 安装/授权地址是否生成正确
 - 验证未来可能新增的 Web 辅助页
 - 抓取 GitHub 文档或接口样例时的辅助观察

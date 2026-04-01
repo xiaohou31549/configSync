@@ -10,6 +10,7 @@ public enum RepoVisibility: String, CaseIterable, Sendable, Identifiable {
 
 public struct Repo: Identifiable, Equatable, Sendable {
     public let id: Int
+    public var installationID: Int
     public var name: String
     public var fullName: String
     public var owner: String
@@ -19,6 +20,7 @@ public struct Repo: Identifiable, Equatable, Sendable {
 
     public init(
         id: Int,
+        installationID: Int = 0,
         name: String,
         fullName: String,
         owner: String,
@@ -27,6 +29,7 @@ public struct Repo: Identifiable, Equatable, Sendable {
         archived: Bool
     ) {
         self.id = id
+        self.installationID = installationID
         self.name = name
         self.fullName = fullName
         self.owner = owner

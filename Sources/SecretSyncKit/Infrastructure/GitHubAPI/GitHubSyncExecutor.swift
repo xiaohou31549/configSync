@@ -62,7 +62,11 @@ public struct GitHubSyncExecutor: SyncExecutor {
                 switch item.type {
                 case .secret:
                     if publicKey == nil {
-                        publicKey = try await client.fetchRepositoryPublicKey(owner: target.owner, repo: target.repo)
+                        publicKey = try await client.fetchRepositoryPublicKey(
+                            owner: target.owner,
+                            repo: target.repo,
+                            installationID: repo.installationID
+                        )
                     }
                     guard let publicKey else {
                         throw AppError.infrastructure("缺少仓库公钥")
@@ -71,6 +75,7 @@ public struct GitHubSyncExecutor: SyncExecutor {
                     try await client.upsertRepositorySecret(
                         owner: target.owner,
                         repo: target.repo,
+                        installationID: repo.installationID,
                         name: item.name,
                         encryptedValue: encryptedValue,
                         keyID: publicKey.keyID
@@ -79,6 +84,7 @@ public struct GitHubSyncExecutor: SyncExecutor {
                     try await client.upsertRepositoryVariable(
                         owner: target.owner,
                         repo: target.repo,
+                        installationID: repo.installationID,
                         name: item.name,
                         value: item.value
                     )

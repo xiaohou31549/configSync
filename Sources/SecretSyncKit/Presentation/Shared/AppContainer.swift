@@ -43,7 +43,10 @@ public struct AppContainer: Sendable {
             configRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
         }
 
-        let authSettingsStore = FileAuthSettingsStore(baseDirectoryOverride: runtime.authSettingsDirectory)
+        let authSettingsStore = FileAuthSettingsStore(
+            baseDirectoryOverride: runtime.authSettingsDirectory,
+            keychainStore: keychainStore
+        )
         let authRepository: any AuthRepository
         let repositoryCatalog: any RepositoryCatalog
         let syncExecutor: any SyncExecutor
@@ -53,16 +56,28 @@ public struct AppContainer: Sendable {
             repositoryCatalog = MockRepositoryCatalog()
             syncExecutor = MockSyncExecutor()
         } else {
-            let authService = GitHubAuthRepository(keychainStore: keychainStore)
-            authRepository = ConfigAwareAuthRepository(keychainStore: keychainStore)
+            let configurationLoader = GitHubAuthConfigurationLoader(
+                baseDirectoryOverride: runtime.authSettingsDirectory,
+                keychainStore: keychainStore
+            )
+            let authService = GitHubAuthRepository(
+                configurationLoader: configurationLoader,
+                keychainStore: keychainStore
+            )
+            authRepository = ConfigAwareAuthRepository(
+                configurationLoader: configurationLoader,
+                keychainStore: keychainStore
+            )
             repositoryCatalog = ConfigAwareRepositoryCatalog(
-                client: GitHubAPIClient(authRepository: authService)
+                client: GitHubAPIClient(authRepository: authService),
+                configurationLoader: configurationLoader
             )
             syncExecutor = ConfigAwareSyncExecutor(
                 realExecutor: GitHubSyncExecutor(
                     client: GitHubActionsAPIClient(authRepository: authService),
                     encryptionService: GitHubSecretEncryptionService()
-                )
+                ),
+                configurationLoader: configurationLoader
             )
         }
 

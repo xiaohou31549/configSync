@@ -11,8 +11,43 @@ public struct GitHubAPIClient: Sendable {
     }
 
     public func fetchRepositories() async throws -> [Repo] {
-        let accessToken = try await authRepository.validAccessToken()
-        var request = URLRequest(url: URL(string: "https://api.github.com/user/repos?per_page=100&sort=updated")!)
+        let accessToken = try await authRepository.validUserAccessToken()
+        let installations = try await authRepository.accessibleInstallations()
+        var repositoriesByID: [Int: Repo] = [:]
+
+        for installation in installations {
+            let data = try await performUserRequest(
+                path: "/user/installations/\(installation.id)/repositories",
+                queryItems: [
+                    URLQueryItem(name: "per_page", value: "100")
+                ],
+                accessToken: accessToken
+            )
+            let payload = try decoder.decode(InstallationRepositoriesResponse.self, from: data)
+            for repository in payload.repositories {
+                repositoriesByID[repository.id] = repository.domainModel(installationID: installation.id)
+            }
+        }
+
+        return repositoriesByID.values.sorted { $0.fullName.lowercased() < $1.fullName.lowercased() }
+    }
+
+    private func performUserRequest(
+        path: String,
+        queryItems: [URLQueryItem] = [],
+        accessToken: String
+    ) async throws -> Data {
+        var components = URLComponents(string: "https://api.github.com")!
+        components.path = path
+        if !queryItems.isEmpty {
+            components.queryItems = queryItems
+        }
+
+        guard let url = components.url else {
+            throw AppError.infrastructure("GitHub 仓库列表 URL 构造失败：\(path)")
+        }
+
+        var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
@@ -28,8 +63,12 @@ public struct GitHubAPIClient: Sendable {
             throw AppError.infrastructure("拉取仓库失败：HTTP \(http.statusCode) \(message)")
         }
 
-        return try decoder.decode([RepositoryResponse].self, from: data).map(\.domainModel)
+        return data
     }
+}
+
+private struct InstallationRepositoriesResponse: Decodable {
+    let repositories: [RepositoryResponse]
 }
 
 private struct RepositoryResponse: Decodable {
@@ -55,9 +94,10 @@ private struct RepositoryResponse: Decodable {
         case archived
     }
 
-    var domainModel: Repo {
+    func domainModel(installationID: Int) -> Repo {
         Repo(
             id: id,
+            installationID: installationID,
             name: name,
             fullName: fullName,
             owner: owner.login,

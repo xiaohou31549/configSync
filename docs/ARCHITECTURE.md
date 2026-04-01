@@ -6,7 +6,7 @@ SecretSync 采用单模块分层架构：`Presentation -> Application -> Domain 
 - `Presentation`：SwiftUI 界面、页面状态、可访问性标识、UI 测试支点。
 - `Application`：用例编排与输入校验，不感知 SwiftUI 和具体外部实现。
 - `Domain`：实体、协议、同步结果、业务规则。
-- `Infrastructure`：GitHub API、OAuth、SQLite、Keychain、加密、配置文件。
+- `Infrastructure`：GitHub App API、安装/授权会话、SQLite、Keychain、加密、配置文件。
 
 ## 当前组合根
 - 入口应用：`Sources/SecretSyncApp/App/SecretSyncApp.swift`
@@ -20,7 +20,7 @@ SecretSync 采用单模块分层架构：`Presentation -> Application -> Domain 
 - 环境变量读取集中在 Harness 运行时配置中，不散落到视图与用例。
 
 ## 运行时模式
-- 正常模式：SQLite + Keychain + 配置感知 GitHub 服务。
+- 正常模式：SQLite + Keychain + 配置感知 GitHub App 服务。
 - Harness 模式：临时目录、独立 Keychain service、可选 In-Memory 仓库、Mock GitHub 服务、跳过会话恢复。
 
 ## 自动生成事实

@@ -88,11 +88,9 @@ public struct ConfigEditorView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
-                        if !viewModel.isAuthenticated {
-                            Text("当前还未登录 GitHub。你可以先保存本地配置；当你准备读取仓库或开始同步时，再点击右侧按钮完成授权。")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text(viewModel.syncReadiness.message)
+                            .font(.footnote)
+                            .foregroundStyle(viewModel.canSyncSelection ? Color.secondary : Color.orange)
 
                         HStack {
                             Button("保存") {
@@ -111,14 +109,10 @@ public struct ConfigEditorView: View {
                             Spacer()
 
                             Button(viewModel.isAuthenticated ? "同步到选中仓库" : "登录 GitHub 后同步") {
-                                if viewModel.isAuthenticated {
-                                    viewModel.syncSelected()
-                                } else {
-                                    viewModel.signIn()
-                                }
+                                viewModel.syncSelected()
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(viewModel.isSyncing)
+                            .disabled(!viewModel.canSyncSelection)
                             .accessibilityIdentifier("editor.syncButton")
                         }
                     }
