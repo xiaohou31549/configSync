@@ -69,13 +69,10 @@ public struct LoginView: View {
         }
         .padding(40)
         .frame(maxWidth: 520)
-        .sheet(isPresented: $viewModel.showAuthSettings) {
-            AuthSettingsSheet(viewModel: viewModel)
-        }
     }
 }
 
-private struct AuthSettingsSheet: View {
+struct AuthSettingsSheet: View {
     @ObservedObject var viewModel: AppViewModel
 
     var body: some View {

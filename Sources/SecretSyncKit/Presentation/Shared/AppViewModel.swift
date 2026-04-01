@@ -17,6 +17,7 @@ public final class AppViewModel: ObservableObject {
     @Published public var showArchivedRepositories = false
     @Published public var configTypeFilter: ConfigItemType = .secret
     @Published public var draft = ConfigItemDraft()
+    @Published public var showConfigEditor = false
     @Published public var isSigningIn = false
     @Published public var isRefreshing = false
     @Published public var isSaving = false
@@ -82,6 +83,10 @@ public final class AppViewModel: ObservableObject {
         container.shouldUsePlaintextSecretEditorForAutomation
     }
 
+    public var isEditingExistingConfigItem: Bool {
+        selectedConfigItemID != nil
+    }
+
     public func loadInitialState(restoreSession: Bool) async {
         loadAuthSettings()
 
@@ -89,11 +94,11 @@ public final class AppViewModel: ObservableObject {
             configItems = try await container.loadConfigItemsUseCase.execute()
             if let selected = selectedConfigItemID,
                let item = configItems.first(where: { $0.id == selected }) {
-                selectConfigItem(item)
+                selectConfigItem(item, presentEditor: false)
             } else if let first = filteredConfigItems.first {
-                selectConfigItem(first)
+                selectConfigItem(first, presentEditor: false)
             } else {
-                createNewDraft()
+                createNewDraft(presentEditor: false)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -154,7 +159,7 @@ public final class AppViewModel: ObservableObject {
                 syncSummary = nil
                 authProgressMessage = nil
                 authorizationURL = nil
-                createNewDraft()
+                createNewDraft(presentEditor: false)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -176,25 +181,20 @@ public final class AppViewModel: ObservableObject {
             }
 
             if let selected = selectedConfigItemID, let item = configItems.first(where: { $0.id == selected }) {
-                draft = ConfigItemDraft(
-                    id: item.id,
-                    name: item.name,
-                    type: item.type,
-                    value: item.value,
-                    description: item.description ?? ""
-                )
+                selectConfigItem(item, presentEditor: false)
             }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    public func createNewDraft() {
+    public func createNewDraft(presentEditor: Bool = true) {
         selectedConfigItemID = nil
         draft = ConfigItemDraft(type: .secret)
+        showConfigEditor = presentEditor
     }
 
-    public func selectConfigItem(_ item: ConfigItem) {
+    public func selectConfigItem(_ item: ConfigItem, presentEditor: Bool = true) {
         selectedConfigItemID = item.id
         draft = ConfigItemDraft(
             id: item.id,
@@ -203,6 +203,11 @@ public final class AppViewModel: ObservableObject {
             value: item.value,
             description: item.description ?? ""
         )
+        showConfigEditor = presentEditor
+    }
+
+    public func dismissConfigEditor() {
+        showConfigEditor = false
     }
 
     public func saveDraft() {
@@ -216,7 +221,8 @@ public final class AppViewModel: ObservableObject {
                 let saved = try await container.saveConfigItemUseCase.execute(draft)
                 configItems = try await container.loadConfigItemsUseCase.execute()
                 selectedConfigItemID = saved.id
-                selectConfigItem(saved)
+                selectConfigItem(saved, presentEditor: false)
+                showConfigEditor = false
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -230,10 +236,11 @@ public final class AppViewModel: ObservableObject {
             do {
                 try await container.deleteConfigItemUseCase.execute(id: selectedConfigItemID)
                 configItems = try await container.loadConfigItemsUseCase.execute()
+                showConfigEditor = false
                 if let next = filteredConfigItems.first {
-                    selectConfigItem(next)
+                    selectConfigItem(next, presentEditor: false)
                 } else {
-                    createNewDraft()
+                    createNewDraft(presentEditor: false)
                 }
             } catch {
                 errorMessage = error.localizedDescription

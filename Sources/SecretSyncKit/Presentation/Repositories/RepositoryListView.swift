@@ -89,7 +89,7 @@ public struct RepositoryListView: View {
             } else {
                 GroupBox("先维护本地 Secret，准备同步时再登录") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("你现在可以先在中间和右侧创建本地 Secret。本应用只会在你需要加载 GitHub 仓库或执行同步时请求授权。")
+                        Text("你现在可以先在中间列表创建并编辑本地 Secret。本应用只会在你需要加载 GitHub 仓库或执行同步时请求授权。")
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 

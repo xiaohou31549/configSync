@@ -13,9 +13,21 @@ public struct ConfigItemsView: View {
                 Text("本地 Secret")
                     .font(.title2.bold())
                 Spacer()
+                Button(viewModel.isAuthenticated ? "同步到选中仓库" : "登录 GitHub 后同步") {
+                    if viewModel.isAuthenticated {
+                        viewModel.syncSelected()
+                    } else {
+                        viewModel.signIn()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.isSyncing || viewModel.filteredConfigItems.isEmpty)
+                .accessibilityIdentifier("config.syncButton")
+
                 Button("新增 Secret") {
                     viewModel.createNewDraft()
                 }
+                .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("config.newButton")
             }
 
@@ -71,6 +83,43 @@ public struct ConfigItemsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityIdentifier("config.list")
+            }
+
+            GroupBox("同步状态") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("覆盖已存在同名配置", isOn: $viewModel.overwriteExisting)
+                        .accessibilityIdentifier("config.overwriteToggle")
+
+                    Text("同步范围：已选仓库 \(viewModel.selectedRepoIDs.count) 个；Secret \(viewModel.selectedItemsForSync.count) 个。未单独打开某条 Secret 时，会同步当前列表中过滤后的全部本地 Secret。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if !viewModel.isAuthenticated {
+                        HStack(spacing: 12) {
+                            Button("登录 GitHub") {
+                                viewModel.signIn()
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("config.loginButton")
+
+                            Button("配置 OAuth") {
+                                viewModel.loadAuthSettings()
+                                viewModel.showAuthSettings = true
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("config.oauthSettingsButton")
+                        }
+
+                        Text("当前还未登录 GitHub。你可以先维护本地 Secret，准备同步时再完成 GitHub 授权。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if let summary = viewModel.syncSummary {
+                SyncResultsPanel(summary: summary)
             }
 
             Spacer(minLength: 0)

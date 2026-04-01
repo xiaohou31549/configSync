@@ -11,33 +11,8 @@ public struct ConfigEditorView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                if !viewModel.isAuthenticated {
-                    GroupBox("准备同步时再登录") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("你现在可以先编辑并保存本地 Secret。只有在读取 GitHub 仓库或执行同步时，才需要完成 GitHub 授权。")
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            HStack {
-                                Button("登录 GitHub") {
-                                    viewModel.signIn()
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .accessibilityIdentifier("editor.loginButton")
-
-                                Button("配置 OAuth") {
-                                    viewModel.loadAuthSettings()
-                                    viewModel.showAuthSettings = true
-                                }
-                                .buttonStyle(.bordered)
-                                .accessibilityIdentifier("editor.oauthSettingsButton")
-                            }
-                        }
-                    }
-                }
-
                 HStack {
-                    Text("编辑器")
+                    Text(viewModel.isEditingExistingConfigItem ? "编辑 Secret" : "新增 Secret")
                         .font(.title2.bold())
                     Spacer()
                     if viewModel.isRefreshing || viewModel.isSaving || viewModel.isSyncing {
@@ -72,51 +47,29 @@ public struct ConfigEditorView: View {
                     }
                 }
 
-                GroupBox("同步操作") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle("覆盖已存在同名配置", isOn: $viewModel.overwriteExisting)
-                        Text("同步范围：已选仓库 \(viewModel.selectedRepoIDs.count) 个；Secret \(viewModel.selectedItemsForSync.count) 个。未在中栏选中具体项时，会同步当前列表中的全部本地 Secret。")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-
-                        if !viewModel.isAuthenticated {
-                            Text("当前还未登录 GitHub。你可以先保存本地 Secret；当你准备读取仓库或开始同步时，再点击右侧按钮完成授权。")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        HStack {
-                            Button("保存") {
-                                viewModel.saveDraft()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(viewModel.isSaving)
-                            .accessibilityIdentifier("editor.saveButton")
-
-                            Button("删除") {
-                                viewModel.deleteSelectedItem()
-                            }
-                            .disabled(viewModel.selectedConfigItemID == nil)
-                            .accessibilityIdentifier("editor.deleteButton")
-
-                            Spacer()
-
-                            Button(viewModel.isAuthenticated ? "同步到选中仓库" : "登录 GitHub 后同步") {
-                                if viewModel.isAuthenticated {
-                                    viewModel.syncSelected()
-                                } else {
-                                    viewModel.signIn()
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(viewModel.isSyncing)
-                            .accessibilityIdentifier("editor.syncButton")
-                        }
+                HStack {
+                    Button("取消") {
+                        viewModel.dismissConfigEditor()
                     }
-                }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("editor.cancelButton")
 
-                if let summary = viewModel.syncSummary {
-                    SyncResultsPanel(summary: summary)
+                    Spacer()
+
+                    if viewModel.isEditingExistingConfigItem {
+                        Button("删除") {
+                            viewModel.deleteSelectedItem()
+                        }
+                        .disabled(viewModel.selectedConfigItemID == nil)
+                        .accessibilityIdentifier("editor.deleteButton")
+                    }
+
+                    Button("保存") {
+                        viewModel.saveDraft()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isSaving)
+                    .accessibilityIdentifier("editor.saveButton")
                 }
 
                 Spacer(minLength: 0)
