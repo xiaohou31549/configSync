@@ -3,12 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		52F3A7942A3F2D245A9542BF /* SecretSyncUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E1A04A349E0457E3B0B8E50 /* SecretSyncUITests.swift */; };
 		55624D40E4763B394140D338 /* HarnessRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0DFE4583236787B877C4C1 /* HarnessRuntimeTests.swift */; };
+		948C21B20FE6118BBE6BE031 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0CE6168FE4EEAB16FE503071 /* Assets.xcassets */; };
 		A86A2C9EF489BCF6FAB51157 /* SecretSyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5E4F467F7102DE0998D28831 /* SecretSyncKit */; };
 		BA6B09768F03AF5408C98487 /* SecretSyncKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9899518CAA78ED925DDCF34D /* SecretSyncKitTests.swift */; };
 		C1EA4EA0EF1F965F705C69CD /* SecretSyncKit in Frameworks */ = {isa = PBXBuildFile; productRef = 330851F2C3EBFDA39C04E64B /* SecretSyncKit */; };
@@ -27,6 +28,7 @@
 
 /* Begin PBXFileReference section */
 		03790B5CA71A298D134E9594 /* SecretSyncUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SecretSyncUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0CE6168FE4EEAB16FE503071 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		150784348A19CDB36914D9B7 /* SecretSync */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SecretSync; path = .; sourceTree = SOURCE_ROOT; };
 		45D3A5F7647ECA9318846AEE /* SecretSyncApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncApp.swift; sourceTree = "<group>"; };
 		6E1A04A349E0457E3B0B8E50 /* SecretSyncUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretSyncUITests.swift; sourceTree = "<group>"; };
@@ -82,10 +84,19 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		837007115E0DBF9829D1FCEE /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0CE6168FE4EEAB16FE503071 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		CFC2DF2F4C28DCF36915E785 /* SecretSyncApp */ = {
 			isa = PBXGroup;
 			children = (
 				5C13DD88F9C10D233EFDCE5B /* App */,
+				837007115E0DBF9829D1FCEE /* Resources */,
 			);
 			path = SecretSyncApp;
 			sourceTree = "<group>";
@@ -142,6 +153,7 @@
 			buildConfigurationList = F07F4C4F11A802163234838F /* Build configuration list for PBXNativeTarget "SecretSync" */;
 			buildPhases = (
 				6CDEECA118C80E977BA30B50 /* Sources */,
+				E4A7AA17967F02074FEB68AC /* Resources */,
 				DC1BFC77FE57D519CD0BCFB5 /* Frameworks */,
 			);
 			buildRules = (
@@ -203,6 +215,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					548BC0A44BC5F9D28D7A6B1B = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					86874B81C6E78057FF469C0A = {
@@ -229,6 +242,7 @@
 			packageReferences = (
 				779D88EDB2EF73321701347D /* XCLocalSwiftPackageReference "." */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -238,6 +252,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E4A7AA17967F02074FEB68AC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				948C21B20FE6118BBE6BE031 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		4EA33BD7E767630F302F0D67 /* Sources */ = {
@@ -298,9 +323,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4374YTC7UU;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -514,9 +537,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 4374YTC7UU;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
