@@ -20,6 +20,17 @@ public struct SaveConfigItemUseCase: Sendable {
             throw AppError.validation("名称和值不能为空")
         }
 
+        let existingItems = try await configRepository.listItems()
+        let hasDuplicateName = existingItems.contains { item in
+            item.type == normalized.type &&
+            item.name == normalized.name &&
+            item.id != normalized.id
+        }
+
+        guard !hasDuplicateName else {
+            throw AppError.validation("已存在同名 Secret，请使用其他名称")
+        }
+
         return try await configRepository.save(draft: normalized)
     }
 }

@@ -10,50 +10,43 @@ public struct ConfigItemsView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("本地配置")
+                Text("本地 Secret")
                     .font(.title2.bold())
                 Spacer()
-                Button("新增") {
+                Button(viewModel.isAuthenticated ? "同步到选中仓库" : "登录 GitHub 后同步") {
+                    if viewModel.isAuthenticated {
+                        viewModel.syncSelected()
+                    } else {
+                        viewModel.signIn()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.isSyncing || viewModel.filteredConfigItems.isEmpty)
+                .accessibilityIdentifier("config.syncButton")
+
+                Button("新增 Secret") {
                     viewModel.createNewDraft()
                 }
+                .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("config.newButton")
             }
 
-            Picker("类型", selection: $viewModel.configTypeFilter) {
-                ForEach(ConfigItemType.allCases) { type in
-                    Text(type.displayName).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            TextField("搜索配置名或描述", text: $viewModel.configSearchText)
+            TextField("搜索 Secret 名称或描述", text: $viewModel.configSearchText)
                 .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("config.searchField")
 
             if viewModel.filteredConfigItems.isEmpty {
-                GroupBox("先创建或导入一组示例配置") {
+                GroupBox("先创建第一条本地 Secret") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("建议先在本地整理好需要同步的 Secrets / Variables，再登录 GitHub 选择目标仓库。")
+                        Text("第一版 MVP 只支持在应用内本地创建、编辑和删除 Secret。准备同步时，再登录 GitHub 选择目标仓库。")
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        HStack {
-                            Button("导入示例配置") {
-                                viewModel.importSampleConfigItems()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .accessibilityIdentifier("config.importSampleButton")
-
-                            Button("新建空白配置") {
-                                viewModel.createNewDraft()
-                            }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("config.blankDraftButton")
+                        Button("新建空白 Secret") {
+                            viewModel.createNewDraft()
                         }
-
-                        Text("示例会包含常见的部署 Secret 和构建 Variable，方便你先体验完整编辑流程。")
-                            .font(.footnote)
-                            .foregroundStyle(.tertiary)
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("config.blankDraftButton")
                     }
                 }
 
@@ -68,11 +61,11 @@ public struct ConfigItemsView: View {
                                 Text(item.name)
                                     .fontWeight(.medium)
                                 Spacer()
-                                Text(item.type.displayName)
+                                Text("Secret")
                                     .font(.caption)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 2)
-                                    .background(item.type == .secret ? .red.opacity(0.12) : .blue.opacity(0.12))
+                                    .background(.red.opacity(0.12))
                                     .clipShape(Capsule())
                             }
                             if let description = item.description, !description.isEmpty {
@@ -90,6 +83,43 @@ public struct ConfigItemsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityIdentifier("config.list")
+            }
+
+            GroupBox("同步状态") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("覆盖已存在同名配置", isOn: $viewModel.overwriteExisting)
+                        .accessibilityIdentifier("config.overwriteToggle")
+
+                    Text("同步范围：已选仓库 \(viewModel.selectedRepoIDs.count) 个；Secret \(viewModel.selectedItemsForSync.count) 个。未单独打开某条 Secret 时，会同步当前列表中过滤后的全部本地 Secret。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if !viewModel.isAuthenticated {
+                        HStack(spacing: 12) {
+                            Button("登录 GitHub") {
+                                viewModel.signIn()
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("config.loginButton")
+
+                            Button("配置 OAuth") {
+                                viewModel.loadAuthSettings()
+                                viewModel.showAuthSettings = true
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("config.oauthSettingsButton")
+                        }
+
+                        Text("当前还未登录 GitHub。你可以先维护本地 Secret，准备同步时再完成 GitHub 授权。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if let summary = viewModel.syncSummary {
+                SyncResultsPanel(summary: summary)
             }
 
             Spacer(minLength: 0)

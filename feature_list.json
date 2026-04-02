@@ -1,14 +1,14 @@
 [
   {
     "id": "secret-local-store-foundation",
-    "title": "本地 Secret 存储与列表基础",
+    "title": "本地 Secret 存储、启动加载与列表基础",
     "priority": 1,
     "area": "config",
     "epic": "secret-local-editing",
     "depends_on": [],
-    "description": "建立本地 Secret 实体、仓储与列表读取能力，支持应用内查看已有 Secret，为后续新增、编辑、删除和同步提供统一数据来源。",
-    "verification": "仓储与用例单元测试覆盖新增后读回、空列表、持久化恢复；必要时补最小 UI 冒烟确认列表展示。",
-    "passes": false
+    "description": "建立本地 Secret 实体、仓储与列表读取能力，并在应用启动时直接加载本地 Secret，作为第一版 MVP 的统一数据来源。",
+    "verification": "仓储与用例单元测试覆盖新增后读回、空列表、持久化恢复；UI 冒烟确认未登录时也能直接进入本地 Secret 编辑流。",
+    "passes": true
   },
   {
     "id": "secret-create-edit-flow",
@@ -19,9 +19,9 @@
     "depends_on": [
       "secret-local-store-foundation"
     ],
-    "description": "用户可新建本地 Secret，并对已有 Secret 执行编辑保存；表单需覆盖名称、值和基础校验。",
-    "verification": "单元测试覆盖保存与重复名校验，XCUITest 覆盖新增、修改、保存后的列表回显。",
-    "passes": false
+    "description": "用户可在应用内新建本地 Secret，并对已有 Secret 执行编辑保存；第一版只做本地创建，不做从 GitHub 仓库导入 Secret。",
+    "verification": "单元测试覆盖保存、编辑回写与重复名校验，XCUITest 覆盖新增、修改、保存后的列表回显。",
+    "passes": true
   },
   {
     "id": "secret-delete-flow",
@@ -34,6 +34,20 @@
     ],
     "description": "用户可删除本地 Secret，并在列表中即时移除；删除行为需保证状态与持久化一致。",
     "verification": "单元测试覆盖删除与不存在目标的处理，XCUITest 覆盖列表删除路径。",
+    "passes": true
+  },
+  {
+    "id": "secret-import-from-github-backlog",
+    "title": "从 GitHub 仓库导入 Secret",
+    "priority": 3,
+    "area": "config",
+    "epic": "secret-import-v2",
+    "depends_on": [
+      "github-oauth-login-session",
+      "github-repo-fetch-search-select"
+    ],
+    "description": "第二版再支持从 GitHub 仓库读取并导入 Secret 元数据或映射，当前 MVP 不包含该能力。",
+    "verification": "待第二版明确导入范围、权限边界与 UI 交互后补充。",
     "passes": false
   },
   {

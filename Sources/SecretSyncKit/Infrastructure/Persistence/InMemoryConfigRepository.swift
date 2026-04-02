@@ -3,7 +3,7 @@ import Foundation
 public actor InMemoryConfigRepository: ConfigRepository {
     private var items: [ConfigItem]
 
-    public init(seedItems: [ConfigItem] = SampleData.configItems) {
+    public init(seedItems: [ConfigItem] = []) {
         self.items = seedItems
     }
 

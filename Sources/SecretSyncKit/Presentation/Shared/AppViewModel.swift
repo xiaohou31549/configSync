@@ -17,6 +17,7 @@ public final class AppViewModel: ObservableObject {
     @Published public var showArchivedRepositories = false
     @Published public var configTypeFilter: ConfigItemType = .secret
     @Published public var draft = ConfigItemDraft()
+    @Published public var showConfigEditor = false
     @Published public var isSigningIn = false
     @Published public var isRefreshing = false
     @Published public var isSaving = false
@@ -64,7 +65,9 @@ public final class AppViewModel: ObservableObject {
     }
 
     public var selectedItemsForSync: [ConfigItem] {
-        if let selectedConfigItemID, let item = configItems.first(where: { $0.id == selectedConfigItemID }) {
+        if showConfigEditor,
+           let selectedConfigItemID,
+           let item = configItems.first(where: { $0.id == selectedConfigItemID }) {
             return [item]
         }
         return filteredConfigItems
@@ -76,6 +79,41 @@ public final class AppViewModel: ObservableObject {
 
     public var hasConfigItems: Bool {
         !configItems.isEmpty
+    }
+
+    public var shouldUsePlaintextSecretEditorForAutomation: Bool {
+        container.shouldUsePlaintextSecretEditorForAutomation
+    }
+
+    public var isEditingExistingConfigItem: Bool {
+        selectedConfigItemID != nil
+    }
+
+    public func loadInitialState(restoreSession: Bool) async {
+        loadAuthSettings()
+
+        do {
+            configItems = try await container.loadConfigItemsUseCase.execute()
+            if let selected = selectedConfigItemID,
+               let item = configItems.first(where: { $0.id == selected }) {
+                selectConfigItem(item, presentEditor: false)
+            } else {
+                createNewDraft(presentEditor: false)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        guard restoreSession else { return }
+
+        do {
+            session = try await container.signInUseCase.restoreSession()
+            if session != nil {
+                repositories = try await container.fetchRepositoriesUseCase.execute()
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     public func signIn() {
@@ -106,15 +144,7 @@ public final class AppViewModel: ObservableObject {
     }
 
     public func restoreSession() async {
-        loadAuthSettings()
-        do {
-            session = try await container.signInUseCase.restoreSession()
-            if session != nil {
-                await refreshAll()
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        await loadInitialState(restoreSession: true)
     }
 
     public func signOut() {
@@ -129,7 +159,7 @@ public final class AppViewModel: ObservableObject {
                 syncSummary = nil
                 authProgressMessage = nil
                 authorizationURL = nil
-                createNewDraft()
+                createNewDraft(presentEditor: false)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -146,30 +176,21 @@ public final class AppViewModel: ObservableObject {
             repositories = try await repos
             configItems = try await items
 
-            if selectedConfigItemID == nil {
-                selectedConfigItemID = filteredConfigItems.first?.id
-            }
-
             if let selected = selectedConfigItemID, let item = configItems.first(where: { $0.id == selected }) {
-                draft = ConfigItemDraft(
-                    id: item.id,
-                    name: item.name,
-                    type: item.type,
-                    value: item.value,
-                    description: item.description ?? ""
-                )
+                selectConfigItem(item, presentEditor: false)
             }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    public func createNewDraft() {
+    public func createNewDraft(presentEditor: Bool = true) {
         selectedConfigItemID = nil
-        draft = ConfigItemDraft(type: configTypeFilter)
+        draft = ConfigItemDraft(type: .secret)
+        showConfigEditor = presentEditor
     }
 
-    public func selectConfigItem(_ item: ConfigItem) {
+    public func selectConfigItem(_ item: ConfigItem, presentEditor: Bool = true) {
         selectedConfigItemID = item.id
         draft = ConfigItemDraft(
             id: item.id,
@@ -178,6 +199,11 @@ public final class AppViewModel: ObservableObject {
             value: item.value,
             description: item.description ?? ""
         )
+        showConfigEditor = presentEditor
+    }
+
+    public func dismissConfigEditor() {
+        showConfigEditor = false
     }
 
     public func saveDraft() {
@@ -191,7 +217,8 @@ public final class AppViewModel: ObservableObject {
                 let saved = try await container.saveConfigItemUseCase.execute(draft)
                 configItems = try await container.loadConfigItemsUseCase.execute()
                 selectedConfigItemID = saved.id
-                selectConfigItem(saved)
+                selectConfigItem(saved, presentEditor: false)
+                showConfigEditor = false
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -205,10 +232,11 @@ public final class AppViewModel: ObservableObject {
             do {
                 try await container.deleteConfigItemUseCase.execute(id: selectedConfigItemID)
                 configItems = try await container.loadConfigItemsUseCase.execute()
+                showConfigEditor = false
                 if let next = filteredConfigItems.first {
-                    selectConfigItem(next)
+                    selectConfigItem(next, presentEditor: false)
                 } else {
-                    createNewDraft()
+                    createNewDraft(presentEditor: false)
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -263,33 +291,6 @@ public final class AppViewModel: ObservableObject {
         guard let url = authorizationURL else { return }
         NSWorkspace.shared.open(url)
 #endif
-    }
-
-    public func importSampleConfigItems() {
-        guard !hasConfigItems else { return }
-
-        Task {
-            do {
-                for item in SampleData.configItems {
-                    let draft = ConfigItemDraft(
-                        name: item.name,
-                        type: item.type,
-                        value: item.value,
-                        description: item.description ?? ""
-                    )
-                    _ = try await container.saveConfigItemUseCase.execute(draft)
-                }
-                configItems = try await container.loadConfigItemsUseCase.execute()
-                configTypeFilter = .secret
-                selectedConfigItemID = filteredConfigItems.first?.id
-                if let selected = selectedConfigItemID,
-                   let item = configItems.first(where: { $0.id == selected }) {
-                    selectConfigItem(item)
-                }
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
     }
 
     public func loadAuthSettings() {

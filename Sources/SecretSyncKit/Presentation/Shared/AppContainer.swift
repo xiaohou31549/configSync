@@ -9,6 +9,7 @@ public struct AppContainer: Sendable {
     public let syncConfigItemsUseCase: SyncConfigItemsUseCase
     public let authSettingsStore: any AuthSettingsStore
     public let shouldRestoreSessionOnLaunch: Bool
+    public let shouldUsePlaintextSecretEditorForAutomation: Bool
 
     public init(
         signInUseCase: SignInUseCase,
@@ -18,7 +19,8 @@ public struct AppContainer: Sendable {
         deleteConfigItemUseCase: DeleteConfigItemUseCase,
         syncConfigItemsUseCase: SyncConfigItemsUseCase,
         authSettingsStore: any AuthSettingsStore,
-        shouldRestoreSessionOnLaunch: Bool
+        shouldRestoreSessionOnLaunch: Bool,
+        shouldUsePlaintextSecretEditorForAutomation: Bool
     ) {
         self.signInUseCase = signInUseCase
         self.fetchRepositoriesUseCase = fetchRepositoriesUseCase
@@ -28,6 +30,7 @@ public struct AppContainer: Sendable {
         self.syncConfigItemsUseCase = syncConfigItemsUseCase
         self.authSettingsStore = authSettingsStore
         self.shouldRestoreSessionOnLaunch = shouldRestoreSessionOnLaunch
+        self.shouldUsePlaintextSecretEditorForAutomation = shouldUsePlaintextSecretEditorForAutomation
     }
 
     public static func bootstrap() -> AppContainer {
@@ -74,7 +77,8 @@ public struct AppContainer: Sendable {
             deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
             syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor),
             authSettingsStore: authSettingsStore,
-            shouldRestoreSessionOnLaunch: !runtime.skipSessionRestore
+            shouldRestoreSessionOnLaunch: !runtime.skipSessionRestore,
+            shouldUsePlaintextSecretEditorForAutomation: runtime.isEnabled
         )
     }
 }

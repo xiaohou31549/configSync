@@ -11,7 +11,7 @@ public struct RootView: View {
 
     public var body: some View {
         MainDashboardView(viewModel: viewModel)
-        .frame(minWidth: 1180, minHeight: 760)
+        .frame(minWidth: 980, minHeight: 760)
         #if canImport(AppKit)
         .background(
             WindowChromeConfigurator()
@@ -19,8 +19,7 @@ public struct RootView: View {
         )
         #endif
         .task {
-            guard container.shouldRestoreSessionOnLaunch else { return }
-            await viewModel.restoreSession()
+            await viewModel.loadInitialState(restoreSession: container.shouldRestoreSessionOnLaunch)
         }
         .alert("提示", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -29,6 +28,23 @@ public struct RootView: View {
             Button("确定", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
+        }
+        .sheet(isPresented: $viewModel.showConfigEditor) {
+            NavigationStack {
+                ConfigEditorView(viewModel: viewModel)
+                    .navigationTitle(viewModel.isEditingExistingConfigItem ? "编辑 Secret" : "新增 Secret")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("关闭") {
+                                viewModel.dismissConfigEditor()
+                            }
+                        }
+                    }
+            }
+            .frame(minWidth: 560, minHeight: 560)
+        }
+        .sheet(isPresented: $viewModel.showAuthSettings) {
+            AuthSettingsSheet(viewModel: viewModel)
         }
     }
 }
@@ -42,10 +58,7 @@ private struct MainDashboardView: View {
                 .frame(minWidth: 300, idealWidth: 340, maxWidth: 380, maxHeight: .infinity)
 
             ConfigItemsView(viewModel: viewModel)
-                .frame(minWidth: 280, idealWidth: 320, maxWidth: 360, maxHeight: .infinity)
-
-            ConfigEditorView(viewModel: viewModel)
-                .frame(minWidth: 540, idealWidth: 720, maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minWidth: 520, idealWidth: 760, maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("root.dashboard")
