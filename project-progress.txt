@@ -57,3 +57,20 @@
 - 已更新登录设置页文案，明确 `Client Secret` 进入 macOS Keychain，私钥文件继续使用用户提供的本地路径。
 - 已同步更新 `docs/PRODUCT_SPEC.md` 与 `docs/DATABASE_SCHEMA.md` 的事实描述。
 - 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`。
+[2026-04-01 09:30 CST] 本地 Secret CRUD MVP 已落地
+- 已将第一版范围收敛为本地 Secret 增删改查，移除“导入示例配置”和 Variable 导向文案，明确新建仅支持在应用内本地创建。
+- 已新增启动即加载本地 Secret 的流程，未登录 GitHub 时也能直接进入本地 Secret 编辑。
+- 已补充保存重复名校验、编辑回写、删除幂等的单元测试，并将 UI 冒烟改为覆盖本地 Secret 的新增、编辑、删除路径。
+- 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test`、`python3 scripts/validate_feature_list.py feature_list.json`、`./scripts/check_architecture.sh`。
+- 尚未执行：`TEAM_ID=你的开发团队ID ./scripts/run_ui_tests.sh`，当前环境缺少 macOS XCUITest 所需签名参数。
+
+[2026-04-01 15:00 CST] UI 测试输入法切换优化已接入
+- 已安装 `im-select`，并将 `scripts/run_ui_tests.sh` 更新为在执行前自动切换到系统输入法 `com.apple.keylayout.ABC`，退出后恢复原输入法。
+- 此修改用于规避 macOS `XCUITest` 通过 `testmanagerd` 模拟输入时，第三方输入法触发的隐私授权弹窗；在当前环境中，原始输入法为 `com.tencent.inputmethod.wetype.pinyin`，脚本可正确切换并恢复。
+- 已验证通过：`TEAM_ID=4374YTC7UU ./scripts/run_ui_tests.sh`，本地 Secret CRUD 的 UI 用例通过，且本轮日志中未再出现 `com.apple.systempreferences` 中断窗口。
+
+[2026-04-01 16:10 CST] 修复 Code Review 的同步范围与 PID 工件问题
+- 已修复 `AppViewModel`：仅在编辑器打开时才按单个选中 Secret 同步；初始化与刷新不再默认选中首项，避免“同步全部”被意外降级为首条。
+- 已补充单元测试，覆盖“编辑器关闭时同步范围应为过滤列表”。
+- 已删除误提交的 `.harness/app.pid`，并将 `.harness/*.pid`、`.harness/*.log` 加入 `.gitignore`，避免运行时工件再次入库。
+- 验证结果：`python3 scripts/validate_feature_list.py feature_list.json`、`bash scripts/check_architecture.sh` 通过；`xcodebuild ... test` 因环境缺少 `xcodebuild` 未执行。

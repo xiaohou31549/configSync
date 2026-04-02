@@ -20,6 +20,9 @@ python3 scripts/validate_feature_list.py feature_list.json
 - 断言对象：按钮、输入框、列表项、静态文本、同步结果、截图附件
 - 环境：Harness 模式，不使用真实数据库和真实 Keychain service
 - macOS UI Runner 需要可用的开发团队签名；因此它作为独立命令执行，而不是默认阻塞 CI
+- 运行 `scripts/run_ui_tests.sh` 时，脚本会优先使用 `im-select` 或 `macism` 将当前输入法切到系统输入法，默认值为 `com.apple.keylayout.ABC`，测试结束后再恢复原输入法
+- 这样做是为了降低 `XCUITest` 通过 `testmanagerd` 模拟键盘输入时触发第三方输入法隐私弹窗的概率；若本机未安装输入法切换工具，脚本会给出警告并建议手动切换
+- 如需覆盖默认输入法，可使用 `UI_TEST_INPUT_SOURCE=<输入法 ID> TEAM_ID=你的开发团队ID ./scripts/run_ui_tests.sh`
 
 ## 不把什么当作主验证
 - 浏览器自动化不是主路径

@@ -15,29 +15,43 @@ final class SecretSyncUITests: XCTestCase {
         app.launch()
     }
 
-    func testCanImportSamplesAndSaveSecret() throws {
-        let importButton = app.buttons["config.importSampleButton"].firstMatch
-        XCTAssertTrue(importButton.waitForExistence(timeout: 10))
-
-        importButton.click()
-        let importedItem = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "VPS_HOST")).firstMatch
-        XCTAssertTrue(importedItem.waitForExistence(timeout: 5))
-
-        app.buttons["新增"].firstMatch.click()
+    func testCanCreateEditAndDeleteLocalSecret() throws {
+        let createButton = app.buttons["新建空白 Secret"].firstMatch
+        XCTAssertTrue(createButton.waitForExistence(timeout: 10))
+        createButton.click()
 
         let nameField = app.textFields["editor.nameField"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 3))
         nameField.click()
         nameField.typeText("HARNESS_SECRET")
 
-        let valueField = app.secureTextFields["editor.secretValueField"]
+        let valueField = app.textFields["editor.valueField"]
         XCTAssertTrue(valueField.waitForExistence(timeout: 3))
         valueField.click()
         valueField.typeText("top-secret-value")
 
-        app.buttons["editor.saveButton"].click()
+        app.buttons["保存"].firstMatch.click()
         let savedItem = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "HARNESS_SECRET")).firstMatch
         XCTAssertTrue(savedItem.waitForExistence(timeout: 5))
+
+        savedItem.click()
+        nameField.click()
+        app.typeKey("a", modifierFlags: [.command])
+        app.typeText("HARNESS_SECRET_V2")
+
+        let editedValueField = app.textFields["editor.valueField"]
+        XCTAssertTrue(editedValueField.waitForExistence(timeout: 3))
+        editedValueField.click()
+        app.typeKey("a", modifierFlags: [.command])
+        app.typeText("top-secret-value-v2")
+
+        app.buttons["保存"].firstMatch.click()
+        let updatedItem = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "HARNESS_SECRET_V2")).firstMatch
+        XCTAssertTrue(updatedItem.waitForExistence(timeout: 5))
+
+        updatedItem.click()
+        app.buttons["删除"].firstMatch.click()
+        XCTAssertFalse(updatedItem.waitForExistence(timeout: 2))
 
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "Harness 主界面冒烟截图"

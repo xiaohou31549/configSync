@@ -8,3 +8,6 @@ dist/
 
 SecretSync.xcodeproj/xcuserdata/
 SecretSync.xcodeproj/project.xcworkspace/xcuserdata/
+
+.harness/*.pid
+.harness/*.log
