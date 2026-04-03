@@ -1,30 +1,31 @@
 import XCTest
 
-@MainActor
 final class SecretSyncUITests: XCTestCase {
-    private let app = XCUIApplication()
-
     override func setUpWithError() throws {
         continueAfterFailure = false
         let authSettingsDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("SecretSyncUITests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: authSettingsDirectory, withIntermediateDirectories: true)
-
-        app.launchEnvironment["SECRET_SYNC_HARNESS"] = "1"
-        app.launchEnvironment["SECRET_SYNC_USE_IN_MEMORY_STORE"] = "1"
-        app.launchEnvironment["SECRET_SYNC_SKIP_SESSION_RESTORE"] = "1"
-        app.launchEnvironment["SECRET_SYNC_AUTH_SETTINGS_DIR"] = authSettingsDirectory.path
-        app.launchEnvironment["SECRET_SYNC_KEYCHAIN_SERVICE"] = "com.tough.SecretSync.ui-tests.\(UUID().uuidString)"
-        app.launchEnvironment["GITHUB_APP_ID"] = "3241508"
-        app.launchEnvironment["GITHUB_APP_CLIENT_ID"] = "Iv23liPcbu7jrAGxIylq"
-        app.launchEnvironment["GITHUB_APP_CLIENT_SECRET"] = "ui-test-client-secret"
-        app.launchEnvironment["GITHUB_APP_SLUG"] = "secretvarsync"
-        app.launchEnvironment["GITHUB_APP_PRIVATE_KEY_PATH"] = "/tmp/secretvarsync-ui-tests.pem"
-        app.launchEnvironment["GITHUB_CALLBACK_PATH"] = "/oauth/callback"
-        app.launch()
+        MainActor.assumeIsolated {
+            let app = XCUIApplication()
+            app.launchEnvironment["SECRET_SYNC_HARNESS"] = "1"
+            app.launchEnvironment["SECRET_SYNC_USE_IN_MEMORY_STORE"] = "1"
+            app.launchEnvironment["SECRET_SYNC_SKIP_SESSION_RESTORE"] = "1"
+            app.launchEnvironment["SECRET_SYNC_AUTH_SETTINGS_DIR"] = authSettingsDirectory.path
+            app.launchEnvironment["SECRET_SYNC_KEYCHAIN_SERVICE"] = "com.tough.SecretSync.ui-tests.\(UUID().uuidString)"
+            app.launchEnvironment["GITHUB_APP_ID"] = "3241508"
+            app.launchEnvironment["GITHUB_APP_CLIENT_ID"] = "Iv23liPcbu7jrAGxIylq"
+            app.launchEnvironment["GITHUB_APP_CLIENT_SECRET"] = "ui-test-client-secret"
+            app.launchEnvironment["GITHUB_APP_SLUG"] = "secretvarsync"
+            app.launchEnvironment["GITHUB_APP_PRIVATE_KEY_PATH"] = "/tmp/secretvarsync-ui-tests.pem"
+            app.launchEnvironment["GITHUB_CALLBACK_PATH"] = "/oauth/callback"
+            app.launch()
+        }
     }
 
+    @MainActor
     func testCanCreateEditAndDeleteLocalSecret() throws {
+        let app = XCUIApplication()
         let createButton = app.buttons["新建空白 Secret"].firstMatch
         XCTAssertTrue(createButton.waitForExistence(timeout: 10))
         createButton.click()
@@ -68,7 +69,9 @@ final class SecretSyncUITests: XCTestCase {
         add(attachment)
     }
 
+    @MainActor
     func testCanStartRealGitHubAppAuthorizationFlow() throws {
+        let app = XCUIApplication()
         let loginButton = app.buttons["repository.loginButton"].firstMatch
         XCTAssertTrue(loginButton.waitForExistence(timeout: 10))
 

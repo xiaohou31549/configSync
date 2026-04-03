@@ -251,6 +251,7 @@ func authConfigurationLoadsFromLocalFile() throws {
 func authConfigurationLoadsLegacyFile() throws {
     let fileManager = FileManager.default
     let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-legacy-load.\(UUID().uuidString)")
     try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
 
     let configuration = GitHubAuthConfiguration(
@@ -266,7 +267,8 @@ func authConfigurationLoadsLegacyFile() throws {
 
     let loader = GitHubAuthConfigurationLoader(
         environment: [:],
-        baseDirectoryOverride: root
+        baseDirectoryOverride: root,
+        keychainStore: keychainStore
     )
 
     let loaded = try loader.loadIfAvailable()
