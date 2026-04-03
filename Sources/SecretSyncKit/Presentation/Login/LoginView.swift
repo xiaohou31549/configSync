@@ -38,7 +38,7 @@ public struct LoginView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Text(viewModel.hasSavedGitHubAppConfiguration ? "已检测到本地 GitHub App 配置" : "当前未配置 GitHub App，将回退到 mock 登录")
+                Text(viewModel.hasSavedGitHubAppConfiguration ? "已检测到本地 GitHub App 配置" : "当前未配置 GitHub App，登录前请先完成配置")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

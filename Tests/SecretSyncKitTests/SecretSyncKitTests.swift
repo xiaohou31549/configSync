@@ -120,6 +120,12 @@ private actor StubAuthRepository: AuthRepository {
     func signOut() async throws {}
 }
 
+private struct ImmediateSuccessSyncExecutor: SyncExecutor {
+    func sync(_ request: SyncRequest) async throws -> SyncSummary {
+        SyncSummary(startedAt: Date(), endedAt: Date(), results: [])
+    }
+}
+
 @Test("保存配置项时会规范化名称")
 func saveConfigNormalizesName() async throws {
     let repository = InMemoryConfigRepository(seedItems: [])
@@ -176,7 +182,7 @@ func deleteMissingSecretIsNoop() async throws {
 
 @Test("同步时要求至少一个仓库和配置项")
 func syncValidatesSelections() async throws {
-    let useCase = SyncConfigItemsUseCase(syncExecutor: MockSyncExecutor())
+    let useCase = SyncConfigItemsUseCase(syncExecutor: ImmediateSuccessSyncExecutor())
 
     await #expect(throws: AppError.self) {
         _ = try await useCase.execute(repos: [], items: SampleData.configItems, overwriteExisting: true)
@@ -593,12 +599,12 @@ func repositoryFilteringAndSelectionInViewModel() async throws {
     let authRoot = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: authRoot, withIntermediateDirectories: true)
     let container = AppContainer(
-        signInUseCase: SignInUseCase(authRepository: MockGitHubAuthRepository()),
+        signInUseCase: SignInUseCase(authRepository: StubAuthRepository(restoredSession: nil)),
         fetchRepositoriesUseCase: FetchRepositoriesUseCase(repositoryCatalog: repositoryCatalog),
         loadConfigItemsUseCase: LoadConfigItemsUseCase(configRepository: configRepository),
         saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: configRepository),
         deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
-        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: MockSyncExecutor()),
+        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: ImmediateSuccessSyncExecutor()),
         authSettingsStore: FileAuthSettingsStore(baseDirectoryOverride: authRoot),
         shouldRestoreSessionOnLaunch: false
     )
@@ -651,7 +657,7 @@ func syncReadinessBlocksMissingSelections() async throws {
         loadConfigItemsUseCase: LoadConfigItemsUseCase(configRepository: configRepository),
         saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: configRepository),
         deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
-        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: MockSyncExecutor()),
+        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: ImmediateSuccessSyncExecutor()),
         authSettingsStore: FileAuthSettingsStore(baseDirectoryOverride: authRoot),
         shouldRestoreSessionOnLaunch: false
     )
@@ -1137,6 +1143,39 @@ func authSettingsStoreRoundTrip() throws {
     #expect(storedSecret == "client-secret")
 }
 
+@Test("覆盖目录下保存的 GitHub App 配置可被加载并生成真实授权地址")
+func authConfigurationLoaderReadsOverrideDirectoryForAuthorizationURL() throws {
+    let fileManager = FileManager.default
+    let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString)
+    try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-override.\(UUID().uuidString)")
+    let store = FileAuthSettingsStore(baseDirectoryOverride: root, keychainStore: keychainStore)
+    try store.saveDraft(
+        GitHubAuthSettingsDraft(
+            appID: "3241508",
+            clientID: "Iv23liPcbu7jrAGxIylq",
+            clientSecret: "client-secret",
+            slug: "secretvarsync",
+            privateKeyPath: "/tmp/secretvarsync.pem",
+            callbackPath: "/oauth/callback"
+        )
+    )
+
+    let loader = GitHubAuthConfigurationLoader(
+        environment: [:],
+        baseDirectoryOverride: root,
+        keychainStore: keychainStore
+    )
+    let configuration = try #require(try loader.loadIfAvailable())
+    let context = try GitHubOAuthService().prepareAuthorization(configuration: configuration)
+    let components = try #require(URLComponents(url: context.authorizationURL, resolvingAgainstBaseURL: false))
+    let queryMap = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+
+    #expect(configuration.clientID == "Iv23liPcbu7jrAGxIylq")
+    #expect(queryMap["client_id"] == "Iv23liPcbu7jrAGxIylq")
+    #expect(context.redirectURI.hasSuffix("/oauth/callback"))
+}
+
 @Test("认证配置会把旧版文件中的 Client Secret 迁移到 Keychain")
 func authSettingsStoreMigratesLegacyClientSecret() throws {
     let fileManager = FileManager.default
@@ -1257,12 +1296,12 @@ func appViewModelSyncScopeUsesFilteredItemsWhenEditorClosed() async throws {
     let settingsRoot = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     try FileManager.default.createDirectory(at: settingsRoot, withIntermediateDirectories: true)
     let container = AppContainer(
-        signInUseCase: SignInUseCase(authRepository: MockGitHubAuthRepository()),
-        fetchRepositoriesUseCase: FetchRepositoriesUseCase(repositoryCatalog: MockRepositoryCatalog()),
+        signInUseCase: SignInUseCase(authRepository: StubAuthRepository(restoredSession: nil)),
+        fetchRepositoriesUseCase: FetchRepositoriesUseCase(repositoryCatalog: StubRepositoryCatalog(repositories: SampleData.repos)),
         loadConfigItemsUseCase: LoadConfigItemsUseCase(configRepository: repository),
         saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: repository),
         deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: repository),
-        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: MockSyncExecutor()),
+        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: ImmediateSuccessSyncExecutor()),
         authSettingsStore: FileAuthSettingsStore(baseDirectoryOverride: settingsRoot),
         shouldRestoreSessionOnLaunch: false,
         shouldUsePlaintextSecretEditorForAutomation: true

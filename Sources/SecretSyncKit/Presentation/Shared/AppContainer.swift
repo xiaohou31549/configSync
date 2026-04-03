@@ -53,39 +53,21 @@ public struct AppContainer: Sendable {
             baseDirectoryOverride: runtime.authSettingsDirectory,
             keychainStore: keychainStore
         )
-        let authRepository: any AuthRepository
-        let repositoryCatalog: any RepositoryCatalog
-        let syncExecutor: any SyncExecutor
-
-        if runtime.useMockServices {
-            authRepository = MockGitHubAuthRepository()
-            repositoryCatalog = MockRepositoryCatalog()
-            syncExecutor = MockSyncExecutor()
-        } else {
-            let configurationLoader = GitHubAuthConfigurationLoader(
-                baseDirectoryOverride: runtime.authSettingsDirectory,
-                keychainStore: keychainStore
-            )
-            let authService = GitHubAuthRepository(
-                configurationLoader: configurationLoader,
-                keychainStore: keychainStore
-            )
-            authRepository = ConfigAwareAuthRepository(
-                configurationLoader: configurationLoader,
-                keychainStore: keychainStore
-            )
-            repositoryCatalog = ConfigAwareRepositoryCatalog(
-                client: GitHubAPIClient(authRepository: authService),
-                configurationLoader: configurationLoader
-            )
-            syncExecutor = ConfigAwareSyncExecutor(
-                realExecutor: GitHubSyncExecutor(
-                    client: GitHubActionsAPIClient(authRepository: authService),
-                    encryptionService: GitHubSecretEncryptionService()
-                ),
-                configurationLoader: configurationLoader
-            )
-        }
+        let configurationLoader = GitHubAuthConfigurationLoader(
+            baseDirectoryOverride: runtime.authSettingsDirectory,
+            keychainStore: keychainStore
+        )
+        let authRepository = GitHubAuthRepository(
+            configurationLoader: configurationLoader,
+            keychainStore: keychainStore
+        )
+        let repositoryCatalog = GitHubRepositoryCatalog(
+            client: GitHubAPIClient(authRepository: authRepository)
+        )
+        let syncExecutor = GitHubSyncExecutor(
+            client: GitHubActionsAPIClient(authRepository: authRepository),
+            encryptionService: GitHubSecretEncryptionService()
+        )
 
         return AppContainer(
             signInUseCase: SignInUseCase(authRepository: authRepository),
@@ -96,7 +78,7 @@ public struct AppContainer: Sendable {
             syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor),
             authSettingsStore: authSettingsStore,
             shouldRestoreSessionOnLaunch: !runtime.skipSessionRestore,
-            shouldOpenAuthorizationURL: !runtime.useMockServices,
+            shouldOpenAuthorizationURL: !runtime.isEnabled,
             shouldUsePlaintextSecretEditorForAutomation: runtime.isEnabled
         )
     }

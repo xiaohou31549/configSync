@@ -132,6 +132,9 @@ public struct FileAuthSettingsStore: AuthSettingsStore {
                 create: true
             )
         }
+        if baseDirectoryOverride != nil {
+            return baseDirectory.appending(path: "auth.json")
+        }
         return baseDirectory
             .appending(path: "SecretSync", directoryHint: .isDirectory)
             .appending(path: "auth.json")

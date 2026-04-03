@@ -57,6 +57,7 @@
 - 已更新登录设置页文案，明确 `Client Secret` 进入 macOS Keychain，私钥文件继续使用用户提供的本地路径。
 - 已同步更新 `docs/PRODUCT_SPEC.md` 与 `docs/DATABASE_SCHEMA.md` 的事实描述。
 - 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`。
+
 [2026-04-01 09:30 CST] 本地 Secret CRUD MVP 已落地
 - 已将第一版范围收敛为本地 Secret 增删改查，移除“导入示例配置”和 Variable 导向文案，明确新建仅支持在应用内本地创建。
 - 已新增启动即加载本地 Secret 的流程，未登录 GitHub 时也能直接进入本地 Secret 编辑。
@@ -74,3 +75,15 @@
 - 已补充单元测试，覆盖“编辑器关闭时同步范围应为过滤列表”。
 - 已删除误提交的 `.harness/app.pid`，并将 `.harness/*.pid`、`.harness/*.log` 加入 `.gitignore`，避免运行时工件再次入库。
 - 验证结果：`python3 scripts/validate_feature_list.py feature_list.json`、`bash scripts/check_architecture.sh` 通过；`xcodebuild ... test` 因环境缺少 `xcodebuild` 未执行。
+
+[2026-04-01 17:10 CST] 本地密钥存储约束已补全文档
+- 已在 `docs/ARCHITECTURE.md` 明确 GitHub App 本地存储边界：`Client Secret` 仅进 Keychain、`auth.json` 只保留元数据、旧配置需自动迁移。
+- 已在 `docs/TESTING_STRATEGY.md` 与 `docs/EXECUTION_PLAN.md` 补充该存储方案的回归验证要求，避免后续回归遗漏。
+- 已在 `docs/HARNESS_ENGINEERING.md` 明确 Harness 下必须使用独立临时配置目录与独立 Keychain service 验证迁移链路。
+
+[2026-04-02 16:30 CST] GitHub App 真实认证路径已移除运行时 mock 回退
+- 已删除 `ConfigAware*` 与运行时 `Mock*` GitHub 实现，`AppContainer` 继续保持始终装配真实 GitHub App 认证、仓库目录与同步链路。
+- 已修复 Harness 覆盖目录下的 GitHub App 配置路径不一致问题；`FileAuthSettingsStore` 与 `GitHubAuthConfigurationLoader` 现在都使用同一临时目录下的 `auth.json`。
+- 已补充单元测试覆盖“覆盖目录保存配置后可生成真实授权地址”，并将 UI 冒烟改为验证真实 `Client ID` 的授权 URL 与 loopback 回调等待状态，不再依赖 mock 登录。
+- 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`、`./scripts/check_architecture.sh`。
+- `TEAM_ID=4374YTC7UU ./scripts/run_ui_tests.sh` 未完成：当前环境返回 `LocalAuthentication Code=-4`，系统级认证流程占用导致 `XCUITest Runner` 初始化失败，需待本机认证弹窗结束后重试。
