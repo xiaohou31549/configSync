@@ -11,10 +11,11 @@ public struct GitHubActionsAPIClient: Sendable {
         self.session = session
     }
 
-    public func fetchRepositoryPublicKey(owner: String, repo: String) async throws -> RepositoryPublicKey {
+    public func fetchRepositoryPublicKey(owner: String, repo: String, installationID: Int) async throws -> RepositoryPublicKey {
         let data = try await performRequest(
             path: "/repos/\(owner)/\(repo)/actions/secrets/public-key",
-            method: "GET"
+            method: "GET",
+            installationID: installationID
         )
         return try decoder.decode(RepositoryPublicKey.self, from: data)
     }
@@ -22,6 +23,7 @@ public struct GitHubActionsAPIClient: Sendable {
     public func upsertRepositorySecret(
         owner: String,
         repo: String,
+        installationID: Int,
         name: String,
         encryptedValue: String,
         keyID: String
@@ -30,6 +32,7 @@ public struct GitHubActionsAPIClient: Sendable {
         _ = try await performRequest(
             path: "/repos/\(owner)/\(repo)/actions/secrets/\(name)",
             method: "PUT",
+            installationID: installationID,
             body: try JSONEncoder().encode(payload),
             allowedStatusCodes: [201, 204]
         )
@@ -38,6 +41,7 @@ public struct GitHubActionsAPIClient: Sendable {
     public func upsertRepositoryVariable(
         owner: String,
         repo: String,
+        installationID: Int,
         name: String,
         value: String
     ) async throws {
@@ -48,6 +52,7 @@ public struct GitHubActionsAPIClient: Sendable {
             _ = try await performRequest(
                 path: "/repos/\(owner)/\(repo)/actions/variables/\(name)",
                 method: "PATCH",
+                installationID: installationID,
                 body: encoded,
                 allowedStatusCodes: [204]
             )
@@ -55,6 +60,7 @@ public struct GitHubActionsAPIClient: Sendable {
             _ = try await performRequest(
                 path: "/repos/\(owner)/\(repo)/actions/variables",
                 method: "POST",
+                installationID: installationID,
                 body: encoded,
                 allowedStatusCodes: [201]
             )
@@ -65,10 +71,11 @@ public struct GitHubActionsAPIClient: Sendable {
     private func performRequest(
         path: String,
         method: String,
+        installationID: Int?,
         body: Data? = nil,
         allowedStatusCodes: Set<Int> = [200]
     ) async throws -> Data {
-        let accessToken = try await authRepository.validAccessToken()
+        let accessToken = try await authRepository.validInstallationAccessToken(for: installationID)
         var components = URLComponents(string: "https://api.github.com")!
         components.path = path
 

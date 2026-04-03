@@ -19,7 +19,10 @@
 ## 阶段 4：验证与观测
 - 单元测试保证核心业务逻辑
 - macOS `XCUITest` 负责桌面端冒烟和关键路径
+- GitHub App 安装授权、安装访问令牌与仓库范围选择需要有独立回归用例
 - Harness 环境变量确保 UI 自动化不污染真实本地数据
+- Harness 覆盖目录下的 GitHub App 配置保存与读取必须走同一路径，避免临时目录联调时落回“未配置”状态
+- GitHub App 本地配置需要独立验证“文件只存元数据、Keychain 存 `Client Secret`、旧配置自动迁移”三类行为
 
 ## 阶段 5：机械化治理
 - 架构边界由 `scripts/check_architecture.sh` 强制

@@ -51,15 +51,15 @@
     "passes": false
   },
   {
-    "id": "github-oauth-login-session",
-    "title": "GitHub OAuth 登录与会话建立",
+    "id": "github-app-install-login-session",
+    "title": "GitHub App 安装、授权与会话建立",
     "priority": 1,
     "area": "auth",
     "epic": "github-repository-linkage",
     "depends_on": [],
-    "description": "用户可通过浏览器完成 GitHub OAuth 授权，应用接收回环回调并建立本地会话，供后续仓库查询与同步使用。",
-    "verification": "单元测试覆盖配置加载、回调参数解析与会话存储；受控环境下补最小登录路径验证。",
-    "passes": false
+    "description": "用户可通过浏览器完成 GitHub App 安装与用户授权，应用接收回环回调并建立本地会话，保存安装标识与访问令牌，供后续仓库查询与同步使用。",
+    "verification": "单元测试覆盖 GitHub App 配置加载、安装/授权回调参数解析、安装访问令牌换取与会话存储；受控环境下补最小安装授权路径验证。",
+    "passes": true
   },
   {
     "id": "github-repo-fetch-search-select",
@@ -68,11 +68,11 @@
     "area": "repositories",
     "epic": "github-repository-linkage",
     "depends_on": [
-      "github-oauth-login-session"
+      "github-app-install-login-session"
     ],
-    "description": "应用可拉取当前账号可访问的 GitHub 仓库，支持搜索、筛选与多选，为同步目标仓库选择提供基础。",
-    "verification": "单元测试覆盖仓库拉取与筛选逻辑，XCUITest 覆盖搜索和多选路径。",
-    "passes": false
+    "description": "应用可基于当前 GitHub App 安装上下文拉取用户已授权范围内的仓库，支持搜索、筛选与多选，为同步目标仓库选择提供基础。",
+    "verification": "单元测试覆盖安装上下文下的仓库拉取与筛选逻辑，XCUITest 覆盖搜索和多选路径。",
+    "passes": true
   },
   {
     "id": "github-sync-api-client",
@@ -81,22 +81,22 @@
     "area": "sync",
     "epic": "github-repository-linkage",
     "depends_on": [
-      "github-oauth-login-session"
+      "github-app-install-login-session"
     ],
-    "description": "封装 GitHub Actions Secret 同步所需的 API 调用，包括仓库公钥获取、Secret 加密与上传结果解析。",
-    "verification": "同步客户端单元测试覆盖成功、鉴权失败、仓库公钥异常与上传失败分支。",
-    "passes": false
+    "description": "封装 GitHub App 安装访问令牌下的 GitHub Actions Secret 同步 API 调用，包括仓库公钥获取、Secret 加密、Secret/Variable 上传与结果解析。",
+    "verification": "同步客户端单元测试覆盖成功、安装权限不足、仓库公钥异常与上传失败分支。",
+    "passes": true
   },
   {
-    "id": "oauth-settings-persistence",
-    "title": "OAuth 本地配置保存",
+    "id": "github-app-settings-persistence",
+    "title": "GitHub App 本地配置保存",
     "priority": 3,
     "area": "settings",
     "epic": "github-repository-linkage",
     "depends_on": [],
-    "description": "用户可在应用中维护 OAuth Client 配置并读回本地文件，减少每次运行前手工配置成本。",
-    "verification": "单元测试覆盖文件读写；后续补 UI 表单校验。",
-    "passes": false
+    "description": "用户可在应用中维护 GitHub App 的 Client ID、App ID、安装入口、私钥来源与回调配置，并读回本地文件，减少每次运行前手工配置成本。",
+    "verification": "单元测试覆盖文件读写与字段规范化；后续补 UI 表单校验。",
+    "passes": true
   },
   {
     "id": "sync-selection-readiness",
@@ -110,7 +110,7 @@
     ],
     "description": "在用户发起同步前，统一校验已选 Secret、已选仓库和登录状态，明确哪些条件缺失时禁止执行同步。",
     "verification": "用例单元测试覆盖未登录、未选 Secret、未选仓库等阻断条件，UI 冒烟覆盖按钮可用状态。",
-    "passes": false
+    "passes": true
   },
   {
     "id": "sync-selected-secret-to-repos",

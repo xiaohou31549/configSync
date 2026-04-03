@@ -14,9 +14,11 @@
 
 ## Keychain
 - `secret.<uuid>`：Secret 的真实值
-- `auth.github.*`：OAuth token 与会话字段
+- `auth.github.appClientSecret`：GitHub App `Client Secret`
+- `auth.github.*`：GitHub App 用户令牌、安装访问令牌与会话字段
 
 ## 设计原则
 - Secret 明文不落 SQLite
+- `Client Secret` 不落 `auth.json`，只保存在当前用户 Keychain
 - SQLite 负责可查询元数据
 - Harness 测试必须使用独立 Keychain service 或 In-Memory 仓库

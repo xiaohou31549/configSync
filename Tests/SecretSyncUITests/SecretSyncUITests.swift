@@ -1,21 +1,31 @@
 import XCTest
 
-@MainActor
 final class SecretSyncUITests: XCTestCase {
-    private let app = XCUIApplication()
-
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app.launchEnvironment["SECRET_SYNC_HARNESS"] = "1"
-        app.launchEnvironment["SECRET_SYNC_USE_IN_MEMORY_STORE"] = "1"
-        app.launchEnvironment["SECRET_SYNC_USE_MOCK_SERVICES"] = "1"
-        app.launchEnvironment["SECRET_SYNC_SKIP_SESSION_RESTORE"] = "1"
-        app.launchEnvironment["SECRET_SYNC_AUTH_SETTINGS_DIR"] = NSTemporaryDirectory()
-        app.launchEnvironment["SECRET_SYNC_KEYCHAIN_SERVICE"] = "com.tough.SecretSync.ui-tests.\(UUID().uuidString)"
-        app.launch()
+        let authSettingsDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("SecretSyncUITests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: authSettingsDirectory, withIntermediateDirectories: true)
+        MainActor.assumeIsolated {
+            let app = XCUIApplication()
+            app.launchEnvironment["SECRET_SYNC_HARNESS"] = "1"
+            app.launchEnvironment["SECRET_SYNC_USE_IN_MEMORY_STORE"] = "1"
+            app.launchEnvironment["SECRET_SYNC_SKIP_SESSION_RESTORE"] = "1"
+            app.launchEnvironment["SECRET_SYNC_AUTH_SETTINGS_DIR"] = authSettingsDirectory.path
+            app.launchEnvironment["SECRET_SYNC_KEYCHAIN_SERVICE"] = "com.tough.SecretSync.ui-tests.\(UUID().uuidString)"
+            app.launchEnvironment["GITHUB_APP_ID"] = "3241508"
+            app.launchEnvironment["GITHUB_APP_CLIENT_ID"] = "Iv23liPcbu7jrAGxIylq"
+            app.launchEnvironment["GITHUB_APP_CLIENT_SECRET"] = "ui-test-client-secret"
+            app.launchEnvironment["GITHUB_APP_SLUG"] = "secretvarsync"
+            app.launchEnvironment["GITHUB_APP_PRIVATE_KEY_PATH"] = "/tmp/secretvarsync-ui-tests.pem"
+            app.launchEnvironment["GITHUB_CALLBACK_PATH"] = "/oauth/callback"
+            app.launch()
+        }
     }
 
+    @MainActor
     func testCanCreateEditAndDeleteLocalSecret() throws {
+        let app = XCUIApplication()
         let createButton = app.buttons["新建空白 Secret"].firstMatch
         XCTAssertTrue(createButton.waitForExistence(timeout: 10))
         createButton.click()
@@ -55,6 +65,35 @@ final class SecretSyncUITests: XCTestCase {
 
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "Harness 主界面冒烟截图"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    func testCanStartRealGitHubAppAuthorizationFlow() throws {
+        let environment = ProcessInfo.processInfo.environment
+        if environment["CI"] == "true" || environment["GITHUB_ACTIONS"] == "true" {
+            throw XCTSkip("GitHub Actions 无法稳定验证真实浏览器授权弹出与桌面回调，这条用例只在本机 UI 冒烟中运行")
+        }
+
+        let app = XCUIApplication()
+        let loginButton = app.buttons["repository.loginButton"].firstMatch
+        XCTAssertTrue(loginButton.waitForExistence(timeout: 10))
+
+        loginButton.click()
+
+        let authorizationText = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS %@", "Iv23liPcbu7jrAGxIylq")
+        ).firstMatch
+        XCTAssertTrue(authorizationText.waitForExistence(timeout: 8))
+
+        let callbackText = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS %@", "redirect_uri=http%3A%2F%2F127.0.0.1")
+        ).firstMatch
+        XCTAssertTrue(callbackText.waitForExistence(timeout: 8))
+
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "GitHub App 授权链路冒烟截图"
         attachment.lifetime = .keepAlways
         add(attachment)
     }

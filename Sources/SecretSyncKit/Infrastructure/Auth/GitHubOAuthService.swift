@@ -1,26 +1,36 @@
 import CryptoKit
 import Foundation
 import Network
+import Security
 
 struct GitHubOAuthService: Sendable {
     private let session: URLSession
+    private let appJWTProvider: @Sendable (GitHubAuthConfiguration) throws -> String
+    private let authorizationCallbackAwaiter: @Sendable (OAuthAuthorizationContext, TimeInterval) async throws -> OAuthCallbackPayload
 
-    init(session: URLSession = .shared) {
+    init(
+        session: URLSession = .shared,
+        appJWTProvider: @escaping @Sendable (GitHubAuthConfiguration) throws -> String = GitHubAppJWTSigner.makeJWT,
+        authorizationCallbackAwaiter: @escaping @Sendable (OAuthAuthorizationContext, TimeInterval) async throws -> OAuthCallbackPayload = { context, timeout in
+            try await listenForAuthorizationCallback(context: context, timeout: timeout)
+        }
+    ) {
         self.session = session
+        self.appJWTProvider = appJWTProvider
+        self.authorizationCallbackAwaiter = authorizationCallbackAwaiter
     }
 
     func prepareAuthorization(configuration: GitHubAuthConfiguration) throws -> OAuthAuthorizationContext {
         let state = Self.randomURLSafeString(length: 32)
         let codeVerifier = Self.randomURLSafeString(length: 64)
         let codeChallenge = Self.codeChallenge(from: codeVerifier)
-        let port = try Self.reserveLoopbackPort()
-        let redirectURI = "http://127.0.0.1:\(port)\(configuration.callbackPath)"
+        let callbackURL = try Self.resolveCallbackURL(from: configuration.callbackPath)
+        let redirectURI = callbackURL.absoluteString
 
         var components = URLComponents(string: "https://github.com/login/oauth/authorize")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: configuration.clientID),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
-            URLQueryItem(name: "scope", value: configuration.scopes.joined(separator: " ")),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256")
@@ -33,14 +43,21 @@ struct GitHubOAuthService: Sendable {
         return OAuthAuthorizationContext(
             authorizationURL: authorizationURL,
             redirectURI: redirectURI,
-            callbackPath: configuration.callbackPath,
-            port: port,
+            callbackPath: callbackURL.path.isEmpty ? "/" : callbackURL.path,
+            port: try Self.validatedLoopbackPort(from: callbackURL),
             state: state,
             codeVerifier: codeVerifier
         )
     }
 
     func awaitAuthorizationCallback(context: OAuthAuthorizationContext, timeout: TimeInterval = 180) async throws -> OAuthCallbackPayload {
+        try await authorizationCallbackAwaiter(context, timeout)
+    }
+    
+    private static func listenForAuthorizationCallback(
+        context: OAuthAuthorizationContext,
+        timeout: TimeInterval = 180
+    ) async throws -> OAuthCallbackPayload {
         let listener = try NWListener(using: .tcp, on: NWEndpoint.Port(rawValue: UInt16(context.port))!)
         listener.newConnectionLimit = 1
 
@@ -117,6 +134,25 @@ struct GitHubOAuthService: Sendable {
         return payload.tokenBundle
     }
 
+    func createInstallationAccessToken(
+        installationID: Int,
+        configuration: GitHubAuthConfiguration
+    ) async throws -> TokenBundle {
+        let jwt = try appJWTProvider(configuration)
+        var request = URLRequest(url: URL(string: "https://api.github.com/app/installations/\(installationID)/access_tokens")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        request.setValue("SecretSync", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await session.data(for: request)
+        try validate(response: response, data: data)
+
+        let payload = try JSONDecoder().decode(InstallationTokenResponse.self, from: data)
+        return payload.tokenBundle
+    }
+
     func refreshToken(_ refreshToken: String, configuration: GitHubAuthConfiguration) async throws -> TokenBundle {
         var request = URLRequest(url: URL(string: "https://github.com/login/oauth/access_token")!)
         request.httpMethod = "POST"
@@ -147,7 +183,7 @@ struct GitHubOAuthService: Sendable {
         }
         guard (200 ..< 300).contains(http.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "未知错误"
-            throw AppError.infrastructure("GitHub OAuth 请求失败：HTTP \(http.statusCode) \(message)")
+            throw AppError.infrastructure("GitHub 授权请求失败：HTTP \(http.statusCode) \(message)")
         }
     }
 
@@ -186,6 +222,37 @@ struct GitHubOAuthService: Sendable {
         }
 
         return Int(UInt16(bigEndian: address.sin_port))
+    }
+
+    private static func resolveCallbackURL(from rawValue: String) throws -> URL {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.contains("://") {
+            guard let url = URL(string: trimmed), let host = url.host else {
+                throw AppError.validation("GitHub App 回调地址无效：\(trimmed)")
+            }
+            guard host == "127.0.0.1" || host == "localhost" else {
+                throw AppError.validation("GitHub App 回调地址必须使用本机 loopback 地址")
+            }
+            _ = try validatedLoopbackPort(from: url)
+            return url
+        }
+
+        let port = try reserveLoopbackPort()
+        let path = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
+        guard let url = URL(string: "http://127.0.0.1:\(port)\(path)") else {
+            throw AppError.infrastructure("GitHub 回调地址构造失败")
+        }
+        return url
+    }
+
+    private static func validatedLoopbackPort(from url: URL) throws -> Int {
+        guard let port = url.port else {
+            throw AppError.validation("完整 GitHub App 回调地址必须显式包含非特权端口，例如 http://127.0.0.1:8080/oauth/callback；若希望自动分配端口，请只填写回调 path")
+        }
+        guard port >= 1024 else {
+            throw AppError.validation("GitHub App 回调地址端口必须大于等于 1024，避免普通桌面应用绑定特权端口失败")
+        }
+        return port
     }
 
     private static func randomURLSafeString(length: Int) -> String {
@@ -232,6 +299,26 @@ private struct TokenResponse: Decodable {
             expiresAt: expiresIn.map { Date().addingTimeInterval(TimeInterval($0)) },
             refreshTokenExpiresAt: refreshTokenExpiresIn.map { Date().addingTimeInterval(TimeInterval($0)) },
             tokenType: tokenType
+        )
+    }
+}
+
+private struct InstallationTokenResponse: Decodable {
+    let token: String
+    let expiresAt: String
+
+    private enum CodingKeys: String, CodingKey {
+        case token
+        case expiresAt = "expires_at"
+    }
+
+    var tokenBundle: TokenBundle {
+        TokenBundle(
+            accessToken: token,
+            refreshToken: nil,
+            expiresAt: ISO8601DateFormatter().date(from: expiresAt),
+            refreshTokenExpiresAt: nil,
+            tokenType: "bearer"
         )
     }
 }
@@ -315,5 +402,83 @@ private extension Dictionary where Key == String, Value == String {
         .sorted()
         .joined(separator: "&")
         .data(using: .utf8)
+    }
+}
+
+private enum GitHubAppJWTSigner {
+    static func makeJWT(configuration: GitHubAuthConfiguration) throws -> String {
+        let now = Int(Date().timeIntervalSince1970)
+        let header = ["alg": "RS256", "typ": "JWT"]
+        let payload = [
+            "iat": now - 60,
+            "exp": now + 540,
+            "iss": configuration.appID
+        ] as [String: Any]
+
+        let signingInput = try [
+            encodeJSON(header),
+            encodeJSON(payload)
+        ].joined(separator: ".")
+
+        let privateKey = try loadPrivateKey(from: configuration.privateKeyPath)
+        let signature = try sign(message: signingInput, privateKey: privateKey)
+        return "\(signingInput).\(base64URLEncoded(signature))"
+    }
+
+    private static func encodeJSON(_ object: [String: String]) throws -> String {
+        let data = try JSONEncoder().encode(object)
+        return base64URLEncoded(data)
+    }
+
+    private static func encodeJSON(_ object: [String: Any]) throws -> String {
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        return base64URLEncoded(data)
+    }
+
+    private static func loadPrivateKey(from path: String) throws -> SecKey {
+        let pem = try String(contentsOfFile: path, encoding: .utf8)
+        let body = pem
+            .components(separatedBy: .newlines)
+            .filter { !$0.hasPrefix("-----BEGIN") && !$0.hasPrefix("-----END") }
+            .joined()
+
+        guard let keyData = Data(base64Encoded: body) else {
+            throw AppError.infrastructure("GitHub App 私钥 PEM 内容无效")
+        }
+
+        let attributes: [String: Any] = [
+            kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
+            kSecAttrKeyClass as String: kSecAttrKeyClassPrivate,
+            kSecAttrKeySizeInBits as String: 2048
+        ]
+
+        var error: Unmanaged<CFError>?
+        guard let key = SecKeyCreateWithData(keyData as CFData, attributes as CFDictionary, &error) else {
+            let message = (error?.takeRetainedValue() as Error?)?.localizedDescription ?? "未知错误"
+            throw AppError.infrastructure("加载 GitHub App 私钥失败：\(message)")
+        }
+        return key
+    }
+
+    private static func sign(message: String, privateKey: SecKey) throws -> Data {
+        let data = Data(message.utf8)
+        let algorithm = SecKeyAlgorithm.rsaSignatureMessagePKCS1v15SHA256
+        guard SecKeyIsAlgorithmSupported(privateKey, .sign, algorithm) else {
+            throw AppError.infrastructure("当前 GitHub App 私钥不支持 RS256 签名")
+        }
+
+        var error: Unmanaged<CFError>?
+        guard let signature = SecKeyCreateSignature(privateKey, algorithm, data as CFData, &error) else {
+            let message = (error?.takeRetainedValue() as Error?)?.localizedDescription ?? "未知错误"
+            throw AppError.infrastructure("生成 GitHub App JWT 签名失败：\(message)")
+        }
+        return signature as Data
+    }
+
+    private static func base64URLEncoded(_ data: Data) -> String {
+        data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }

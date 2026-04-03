@@ -30,6 +30,13 @@
 - 由于 macOS UI 测试依赖签名与 Runner 装载，默认 CI 不阻塞它，使用 `scripts/run_ui_tests.sh` 作为独立入口
 
 ## 何时使用浏览器工具
-- 验证 OAuth 授权地址是否生成正确
+- 验证 GitHub App 安装/授权地址是否生成正确
 - 验证未来可能新增的 Web 辅助页
 - 抓取 GitHub 文档或接口样例时的辅助观察
+
+## GitHub App 本地配置约束
+- Harness 模式下的 GitHub App 配置文件应写入独立临时目录，不复用真实用户的 `auth.json`
+- Harness 模式下的配置保存与配置加载必须共享同一临时目录约定，避免 UI 自动化进入“保存成功但读取失败”的假阴性
+- Harness 模式下的 `Client Secret` 必须使用独立 Keychain service 保存，测试结束后可安全丢弃
+- 若验证旧版配置迁移，迁移目标也必须是 Harness 专用 Keychain，不能触碰真实本机条目
+- Harness 不再提供 mock GitHub 服务；授权测试只验证真实 GitHub App 授权 URL、本地回调监听与错误提示，不触碰真实用户仓库

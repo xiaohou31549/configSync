@@ -3,7 +3,6 @@ import Foundation
 public struct HarnessRuntime: Sendable {
     public let isEnabled: Bool
     public let useInMemoryStore: Bool
-    public let useMockServices: Bool
     public let skipSessionRestore: Bool
     public let authSettingsDirectory: URL?
     public let databaseURL: URL?
@@ -12,7 +11,6 @@ public struct HarnessRuntime: Sendable {
     public init(
         isEnabled: Bool,
         useInMemoryStore: Bool,
-        useMockServices: Bool,
         skipSessionRestore: Bool,
         authSettingsDirectory: URL?,
         databaseURL: URL?,
@@ -20,7 +18,6 @@ public struct HarnessRuntime: Sendable {
     ) {
         self.isEnabled = isEnabled
         self.useInMemoryStore = useInMemoryStore
-        self.useMockServices = useMockServices
         self.skipSessionRestore = skipSessionRestore
         self.authSettingsDirectory = authSettingsDirectory
         self.databaseURL = databaseURL
@@ -30,7 +27,6 @@ public struct HarnessRuntime: Sendable {
     public static func current(environment: [String: String] = ProcessInfo.processInfo.environment) -> HarnessRuntime {
         let isEnabled = environment.flagValue(for: "SECRET_SYNC_HARNESS")
         let useInMemoryStore = environment.flagValue(for: "SECRET_SYNC_USE_IN_MEMORY_STORE", defaultValue: isEnabled)
-        let useMockServices = environment.flagValue(for: "SECRET_SYNC_USE_MOCK_SERVICES", defaultValue: isEnabled)
         let skipSessionRestore = environment.flagValue(for: "SECRET_SYNC_SKIP_SESSION_RESTORE", defaultValue: isEnabled)
         let authSettingsDirectory = environment["SECRET_SYNC_AUTH_SETTINGS_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
         let databaseURL = environment["SECRET_SYNC_DATABASE_PATH"].map { URL(fileURLWithPath: $0) }
@@ -39,7 +35,6 @@ public struct HarnessRuntime: Sendable {
         return HarnessRuntime(
             isEnabled: isEnabled,
             useInMemoryStore: useInMemoryStore,
-            useMockServices: useMockServices,
             skipSessionRestore: skipSessionRestore,
             authSettingsDirectory: authSettingsDirectory,
             databaseURL: databaseURL,

@@ -9,6 +9,6 @@ public struct FetchRepositoriesUseCase: Sendable {
 
     public func execute() async throws -> [Repo] {
         try await repositoryCatalog.fetchRepositories()
-            .sorted { $0.fullName.localizedCaseInsensitiveCompare($1.fullName) == .orderedAscending }
+            .sorted { $0.fullName.lowercased() < $1.fullName.lowercased() }
     }
 }

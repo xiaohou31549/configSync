@@ -47,6 +47,27 @@ public struct ConfigEditorView: View {
                     }
                 }
 
+                GroupBox("同步操作") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle("覆盖已存在同名配置", isOn: $viewModel.overwriteExisting)
+
+                        Text("同步范围：已选仓库 \(viewModel.selectedRepoIDs.count) 个；配置项 \(viewModel.selectedItemsForSync.count) 个。未在中栏选中具体项时，会同步当前类型筛选下的全部可见项。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+
+                        Text(viewModel.syncReadiness.message)
+                            .font(.footnote)
+                            .foregroundStyle(viewModel.canSyncSelection ? Color.secondary : Color.orange)
+
+                        Button(viewModel.isAuthenticated ? "同步到选中仓库" : "登录 GitHub 后同步") {
+                            viewModel.syncSelected()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!viewModel.canSyncSelection)
+                        .accessibilityIdentifier("editor.syncButton")
+                    }
+                }
+
                 HStack {
                     Button("取消") {
                         viewModel.dismissConfigEditor()

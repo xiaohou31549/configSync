@@ -9,6 +9,7 @@ public struct AppContainer: Sendable {
     public let syncConfigItemsUseCase: SyncConfigItemsUseCase
     public let authSettingsStore: any AuthSettingsStore
     public let shouldRestoreSessionOnLaunch: Bool
+    public let shouldOpenAuthorizationURL: Bool
     public let shouldUsePlaintextSecretEditorForAutomation: Bool
 
     public init(
@@ -20,7 +21,8 @@ public struct AppContainer: Sendable {
         syncConfigItemsUseCase: SyncConfigItemsUseCase,
         authSettingsStore: any AuthSettingsStore,
         shouldRestoreSessionOnLaunch: Bool,
-        shouldUsePlaintextSecretEditorForAutomation: Bool
+        shouldOpenAuthorizationURL: Bool = true,
+        shouldUsePlaintextSecretEditorForAutomation: Bool = false
     ) {
         self.signInUseCase = signInUseCase
         self.fetchRepositoriesUseCase = fetchRepositoriesUseCase
@@ -30,6 +32,7 @@ public struct AppContainer: Sendable {
         self.syncConfigItemsUseCase = syncConfigItemsUseCase
         self.authSettingsStore = authSettingsStore
         self.shouldRestoreSessionOnLaunch = shouldRestoreSessionOnLaunch
+        self.shouldOpenAuthorizationURL = shouldOpenAuthorizationURL
         self.shouldUsePlaintextSecretEditorForAutomation = shouldUsePlaintextSecretEditorForAutomation
     }
 
@@ -46,28 +49,25 @@ public struct AppContainer: Sendable {
             configRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
         }
 
-        let authSettingsStore = FileAuthSettingsStore(baseDirectoryOverride: runtime.authSettingsDirectory)
-        let authRepository: any AuthRepository
-        let repositoryCatalog: any RepositoryCatalog
-        let syncExecutor: any SyncExecutor
-
-        if runtime.useMockServices {
-            authRepository = MockGitHubAuthRepository()
-            repositoryCatalog = MockRepositoryCatalog()
-            syncExecutor = MockSyncExecutor()
-        } else {
-            let authService = GitHubAuthRepository(keychainStore: keychainStore)
-            authRepository = ConfigAwareAuthRepository(keychainStore: keychainStore)
-            repositoryCatalog = ConfigAwareRepositoryCatalog(
-                client: GitHubAPIClient(authRepository: authService)
-            )
-            syncExecutor = ConfigAwareSyncExecutor(
-                realExecutor: GitHubSyncExecutor(
-                    client: GitHubActionsAPIClient(authRepository: authService),
-                    encryptionService: GitHubSecretEncryptionService()
-                )
-            )
-        }
+        let authSettingsStore = FileAuthSettingsStore(
+            baseDirectoryOverride: runtime.authSettingsDirectory,
+            keychainStore: keychainStore
+        )
+        let configurationLoader = GitHubAuthConfigurationLoader(
+            baseDirectoryOverride: runtime.authSettingsDirectory,
+            keychainStore: keychainStore
+        )
+        let authRepository = GitHubAuthRepository(
+            configurationLoader: configurationLoader,
+            keychainStore: keychainStore
+        )
+        let repositoryCatalog = GitHubRepositoryCatalog(
+            client: GitHubAPIClient(authRepository: authRepository)
+        )
+        let syncExecutor = GitHubSyncExecutor(
+            client: GitHubActionsAPIClient(authRepository: authRepository),
+            encryptionService: GitHubSecretEncryptionService()
+        )
 
         return AppContainer(
             signInUseCase: SignInUseCase(authRepository: authRepository),
@@ -78,6 +78,7 @@ public struct AppContainer: Sendable {
             syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor),
             authSettingsStore: authSettingsStore,
             shouldRestoreSessionOnLaunch: !runtime.skipSessionRestore,
+            shouldOpenAuthorizationURL: !runtime.isEnabled,
             shouldUsePlaintextSecretEditorForAutomation: runtime.isEnabled
         )
     }
