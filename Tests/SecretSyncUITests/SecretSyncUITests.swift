@@ -71,7 +71,8 @@ final class SecretSyncUITests: XCTestCase {
 
     @MainActor
     func testCanStartRealGitHubAppAuthorizationFlow() throws {
-        if ProcessInfo.processInfo.environment["CI"] == "true" {
+        let environment = ProcessInfo.processInfo.environment
+        if environment["CI"] == "true" || environment["GITHUB_ACTIONS"] == "true" {
             throw XCTSkip("GitHub Actions 无法稳定验证真实浏览器授权弹出与桌面回调，这条用例只在本机 UI 冒烟中运行")
         }
 

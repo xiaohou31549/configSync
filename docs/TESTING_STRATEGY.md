@@ -14,7 +14,7 @@
 
 ## 推荐命令
 ```bash
-xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination "platform=macOS" test
+xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination "platform=macOS" -only-testing:SecretSyncKitTests test
 TEAM_ID=你的开发团队ID ./scripts/run_ui_tests.sh
 python3 scripts/doc_gardening.py --check
 ./scripts/check_architecture.sh
@@ -28,6 +28,7 @@ python3 scripts/validate_feature_list.py feature_list.json
 - 环境：Harness 模式，不使用真实数据库和真实 Keychain service
 - Harness 下不再回退 mock GitHub 服务；UI 测试验证真实 GitHub App 授权 URL 的生成、展示与本地回调等待状态
 - macOS UI Runner 需要可用的开发团队签名；因此它作为独立命令执行，而不是默认阻塞 CI
+- GitHub Actions 默认只运行 `SecretSyncKitTests`；`SecretSyncUITests` 由本机 `scripts/run_ui_tests.sh` 独立执行
 - 运行 `scripts/run_ui_tests.sh` 时，脚本会优先使用 `im-select` 或 `macism` 将当前输入法切到系统输入法，默认值为 `com.apple.keylayout.ABC`，测试结束后再恢复原输入法
 - 这样做是为了降低 `XCUITest` 通过 `testmanagerd` 模拟键盘输入时触发第三方输入法隐私弹窗的概率；若本机未安装输入法切换工具，脚本会给出警告并建议手动切换
 - 如需覆盖默认输入法，可使用 `UI_TEST_INPUT_SOURCE=<输入法 ID> TEAM_ID=你的开发团队ID ./scripts/run_ui_tests.sh`

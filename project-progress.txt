@@ -87,3 +87,6 @@
 - 已补充单元测试覆盖“覆盖目录保存配置后可生成真实授权地址”，并将 UI 冒烟改为验证真实 `Client ID` 的授权 URL 与 loopback 回调等待状态，不再依赖 mock 登录。
 - 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`、`./scripts/check_architecture.sh`。
 - `TEAM_ID=4374YTC7UU ./scripts/run_ui_tests.sh` 未完成：当前环境返回 `LocalAuthentication Code=-4`，系统级认证流程占用导致 `XCUITest Runner` 初始化失败，需待本机认证弹窗结束后重试。
+[2026-04-03 19:38 CST] GitHub Actions 仅保留可稳定运行的单元测试
+- 已将 `.github/workflows/ci.yml` 调整为只执行 `SecretSyncKitTests`，避免 GitHub Actions 在无稳定签名与浏览器联动条件下运行 `SecretSyncUITests`。
+- 已同步更新 `docs/TESTING_STRATEGY.md`，明确 UI 测试属于本机 `scripts/run_ui_tests.sh` 的独立验证入口，不作为默认 CI gate。
