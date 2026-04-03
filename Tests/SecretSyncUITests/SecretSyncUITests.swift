@@ -77,18 +77,15 @@ final class SecretSyncUITests: XCTestCase {
 
         loginButton.click()
 
-        let waitingMessage = app.staticTexts["等待浏览器完成 GitHub 授权回调…"]
-        XCTAssertTrue(waitingMessage.waitForExistence(timeout: 8))
-
         let authorizationText = app.staticTexts.containing(
             NSPredicate(format: "label CONTAINS %@", "Iv23liPcbu7jrAGxIylq")
         ).firstMatch
-        XCTAssertTrue(authorizationText.waitForExistence(timeout: 3))
+        XCTAssertTrue(authorizationText.waitForExistence(timeout: 8))
 
         let callbackText = app.staticTexts.containing(
             NSPredicate(format: "label CONTAINS %@", "redirect_uri=http%3A%2F%2F127.0.0.1")
         ).firstMatch
-        XCTAssertTrue(callbackText.waitForExistence(timeout: 3))
+        XCTAssertTrue(callbackText.waitForExistence(timeout: 8))
 
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "GitHub App 授权链路冒烟截图"

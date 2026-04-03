@@ -346,6 +346,40 @@ func githubAppAuthorizationUsesLoopbackCallback() throws {
     #expect((queryMap["code_challenge"] ?? "").isEmpty == false)
 }
 
+@Test("完整 GitHub App 回调地址必须显式包含非特权端口")
+func githubAppAuthorizationRejectsCallbackURLWithoutPort() throws {
+    let service = GitHubOAuthService()
+    let configuration = GitHubAuthConfiguration(
+        appID: "3241508",
+        clientID: "Iv1.testclient",
+        clientSecret: "secret-123",
+        slug: "secretvarsync",
+        privateKeyPath: "/tmp/secretvarsync.pem",
+        callbackPath: "http://127.0.0.1/oauth/callback"
+    )
+
+    #expect(throws: AppError.self) {
+        _ = try service.prepareAuthorization(configuration: configuration)
+    }
+}
+
+@Test("完整 GitHub App 回调地址会拒绝特权端口")
+func githubAppAuthorizationRejectsPrivilegedCallbackPort() throws {
+    let service = GitHubOAuthService()
+    let configuration = GitHubAuthConfiguration(
+        appID: "3241508",
+        clientID: "Iv1.testclient",
+        clientSecret: "secret-123",
+        slug: "secretvarsync",
+        privateKeyPath: "/tmp/secretvarsync.pem",
+        callbackPath: "http://127.0.0.1:80/oauth/callback"
+    )
+
+    #expect(throws: AppError.self) {
+        _ = try service.prepareAuthorization(configuration: configuration)
+    }
+}
+
 @Test("GitHub App 授权回调可建立并恢复会话")
 func githubAppSignInAndRestoreSession() async throws {
     let configuration = URLSessionConfiguration.ephemeral
@@ -805,6 +839,88 @@ func githubInstallationTokenExchangeIsUsedForActionsAPI() async throws {
     #expect(publicKey.key == "pub")
     #expect(requests.contains(where: { $0.url?.path == "/app/installations/987/access_tokens" }))
     #expect(requests.contains(where: { $0.url?.path == "/repos/octocat/secretsync/actions/secrets/public-key" }))
+}
+
+@Test("GitHub 安装列表会分页拉取并合并缓存")
+func githubAuthRepositoryPaginatesInstallationsBeforeCaching() async throws {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockURLProtocol.self]
+    let urlSession = URLSession(configuration: configuration)
+    let keychainService = "com.tough.SecretSync.tests.auth-pagination.\(UUID().uuidString)"
+    let keychainStore = KeychainStore(service: keychainService)
+    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
+    try keychainStore.save("bearer", for: "auth.github.userTokenType")
+    let authRepository = GitHubAuthRepository(
+        configurationLoader: GitHubAuthConfigurationLoader(
+            environment: [
+                "GITHUB_APP_ID": "3241508",
+                "GITHUB_APP_CLIENT_ID": "Iv1.testclient",
+                "GITHUB_APP_CLIENT_SECRET": "secret-123",
+                "GITHUB_APP_SLUG": "secretvarsync",
+                "GITHUB_APP_PRIVATE_KEY_PATH": "/tmp/secretvarsync.pem"
+            ]
+        ),
+        oauthService: GitHubOAuthService(session: urlSession),
+        keychainStore: keychainStore,
+        session: urlSession
+    )
+    let requestRecorder = RequestRecorder()
+
+    MockURLProtocol.requestHandler = { request in
+        let url = try #require(request.url)
+        requestRecorder.append(
+            RecordedRequest(
+                url: request.url,
+                headers: request.allHTTPHeaderFields ?? [:],
+                body: readRequestBody(from: request)
+            )
+        )
+
+        if url.host == "api.github.com", url.path == "/user" {
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, #"{"login":"octocat"}"#.data(using: .utf8)!)
+        }
+
+        if url.host == "api.github.com", url.path == "/user/installations" {
+            let page = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "page" })?
+                .value
+
+            let payload: String
+            switch page {
+            case "1":
+                payload = #"{"total_count":2,"installations":[{"id":101,"account":{"login":"octo-org","type":"Organization"}}]}"#
+            case "2":
+                payload = #"{"total_count":2,"installations":[{"id":202,"account":{"login":"octocat","type":"User"}}]}"#
+            default:
+                payload = #"{"total_count":2,"installations":[]}"#
+            }
+
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, payload.data(using: .utf8)!)
+        }
+
+        throw URLError(.unsupportedURL)
+    }
+    defer { MockURLProtocol.requestHandler = nil }
+
+    let session = try await authRepository.currentSession()
+    let storedInstallations = try await authRepository.accessibleInstallations()
+    let requests = requestRecorder.snapshot()
+    let installationPages = requests.compactMap { request -> String? in
+        guard let url = request.url, url.host == "api.github.com", url.path == "/user/installations" else {
+            return nil
+        }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "page" })?
+            .value
+    }
+
+    #expect(session?.installations.count == 2)
+    #expect(storedInstallations.count == 2)
+    #expect(Set(installationPages) == Set(["1", "2"]))
 }
 
 @Test("GitHub 同步客户端可完成 Secret 与 Variable 上传")

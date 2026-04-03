@@ -170,24 +170,57 @@ public actor GitHubAuthRepository: AuthRepository {
     }
 
     private func fetchInstallations(accessToken: String) async throws -> [GitHubInstallation] {
-        var request = URLRequest(url: URL(string: "https://api.github.com/user/installations")!)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-        request.setValue("SecretSync", forHTTPHeaderField: "User-Agent")
+        var page = 1
+        var installations: [GitHubInstallation] = []
+        var expectedTotalCount: Int?
 
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw AppError.infrastructure("GitHub 安装列表响应无效")
+        while true {
+            var components = URLComponents(string: "https://api.github.com/user/installations")!
+            components.queryItems = [
+                URLQueryItem(name: "per_page", value: "100"),
+                URLQueryItem(name: "page", value: String(page))
+            ]
+            guard let url = components.url else {
+                throw AppError.infrastructure("GitHub 安装列表地址构造失败")
+            }
+
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+            request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+            request.setValue("SecretSync", forHTTPHeaderField: "User-Agent")
+
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw AppError.infrastructure("GitHub 安装列表响应无效")
+            }
+
+            guard (200 ..< 300).contains(http.statusCode) else {
+                let message = String(data: data, encoding: .utf8) ?? "未知错误"
+                throw AppError.infrastructure("拉取 GitHub App 安装列表失败：HTTP \(http.statusCode) \(message)")
+            }
+
+            let payload = try decoder.decode(UserInstallationsResponse.self, from: data)
+            expectedTotalCount = expectedTotalCount ?? payload.totalCount
+            installations.append(contentsOf: payload.installations.map(\.domainModel))
+
+            let currentPageCount = payload.installations.count
+            if currentPageCount == 0 {
+                break
+            }
+
+            if let expectedTotalCount, installations.count >= expectedTotalCount {
+                break
+            }
+
+            if expectedTotalCount == nil, currentPageCount < 100 {
+                break
+            }
+
+            page += 1
         }
 
-        guard (200 ..< 300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "未知错误"
-            throw AppError.infrastructure("拉取 GitHub App 安装列表失败：HTTP \(http.statusCode) \(message)")
-        }
-
-        let payload = try decoder.decode(UserInstallationsResponse.self, from: data)
-        return payload.installations.map(\.domainModel)
+        return installations
     }
 
     private func loadUserTokenBundle() throws -> TokenBundle? {
@@ -303,9 +336,11 @@ private struct UserProfileResponse: Decodable {
 }
 
 private struct UserInstallationsResponse: Decodable {
+    let totalCount: Int?
     let installations: [Installation]
 
     private enum CodingKeys: String, CodingKey {
+        case totalCount = "total_count"
         case installations
     }
 

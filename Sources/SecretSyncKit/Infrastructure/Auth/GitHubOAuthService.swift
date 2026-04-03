@@ -44,7 +44,7 @@ struct GitHubOAuthService: Sendable {
             authorizationURL: authorizationURL,
             redirectURI: redirectURI,
             callbackPath: callbackURL.path.isEmpty ? "/" : callbackURL.path,
-            port: callbackURL.port ?? 80,
+            port: try Self.validatedLoopbackPort(from: callbackURL),
             state: state,
             codeVerifier: codeVerifier
         )
@@ -233,6 +233,7 @@ struct GitHubOAuthService: Sendable {
             guard host == "127.0.0.1" || host == "localhost" else {
                 throw AppError.validation("GitHub App 回调地址必须使用本机 loopback 地址")
             }
+            _ = try validatedLoopbackPort(from: url)
             return url
         }
 
@@ -242,6 +243,16 @@ struct GitHubOAuthService: Sendable {
             throw AppError.infrastructure("GitHub 回调地址构造失败")
         }
         return url
+    }
+
+    private static func validatedLoopbackPort(from url: URL) throws -> Int {
+        guard let port = url.port else {
+            throw AppError.validation("完整 GitHub App 回调地址必须显式包含非特权端口，例如 http://127.0.0.1:8080/oauth/callback；若希望自动分配端口，请只填写回调 path")
+        }
+        guard port >= 1024 else {
+            throw AppError.validation("GitHub App 回调地址端口必须大于等于 1024，避免普通桌面应用绑定特权端口失败")
+        }
+        return port
     }
 
     private static func randomURLSafeString(length: Int) -> String {
