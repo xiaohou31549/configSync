@@ -126,6 +126,14 @@ private struct ImmediateSuccessSyncExecutor: SyncExecutor {
     }
 }
 
+private struct StubSummarySyncExecutor: SyncExecutor {
+    let summary: SyncSummary
+
+    func sync(_ request: SyncRequest) async throws -> SyncSummary {
+        summary
+    }
+}
+
 @Test("保存配置项时会规范化名称")
 func saveConfigNormalizesName() async throws {
     let repository = InMemoryConfigRepository(seedItems: [])
@@ -758,6 +766,57 @@ func syncReadinessAllowsReadySelections() async throws {
     #expect(requests.count == 1)
     #expect(requests[0].repos.map(\.fullName) == ["acme/alpha"])
     #expect(requests[0].items.map(\.name) == ["API_TOKEN"])
+}
+
+@MainActor
+@Test("同步完成后会在页面状态中保留结果摘要")
+func syncSelectedStoresSummaryForFeedback() async throws {
+    let configRepository = InMemoryConfigRepository(
+        seedItems: [ConfigItem(name: "API_TOKEN", type: .secret, value: "plain-secret")]
+    )
+    let authRoot = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: authRoot, withIntermediateDirectories: true)
+    let restoredSession = UserSession(
+        username: "octocat",
+        accessToken: "ghu_token",
+        tokenBundle: TokenBundle(accessToken: "ghu_token", refreshToken: nil, expiresAt: nil, refreshTokenExpiresAt: nil, tokenType: "bearer"),
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
+    )
+    let summary = SyncSummary(
+        startedAt: Date(),
+        endedAt: Date(),
+        results: [
+            SyncResult(repoFullName: "acme/alpha", itemName: "API_TOKEN", itemType: .secret, status: .success),
+            SyncResult(repoFullName: "acme/beta", itemName: "API_TOKEN", itemType: .secret, status: .failed("权限不足"))
+        ]
+    )
+    let container = AppContainer(
+        signInUseCase: SignInUseCase(authRepository: StubAuthRepository(restoredSession: restoredSession)),
+        fetchRepositoriesUseCase: FetchRepositoriesUseCase(
+            repositoryCatalog: StubRepositoryCatalog(
+                repositories: [
+                    Repo(id: 1, installationID: 987, name: "alpha", fullName: "acme/alpha", owner: "acme", visibility: .public, defaultBranch: "main", archived: false),
+                    Repo(id: 2, installationID: 987, name: "beta", fullName: "acme/beta", owner: "acme", visibility: .private, defaultBranch: "main", archived: false)
+                ]
+            )
+        ),
+        loadConfigItemsUseCase: LoadConfigItemsUseCase(configRepository: configRepository),
+        saveConfigItemUseCase: SaveConfigItemUseCase(configRepository: configRepository),
+        deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
+        syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: StubSummarySyncExecutor(summary: summary)),
+        authSettingsStore: FileAuthSettingsStore(baseDirectoryOverride: authRoot),
+        shouldRestoreSessionOnLaunch: false
+    )
+    let viewModel = AppViewModel(container: container)
+
+    await viewModel.restoreSession()
+    viewModel.selectedRepoIDs = [1, 2]
+    viewModel.syncSelected()
+    try await Task.sleep(for: .milliseconds(50))
+
+    #expect(viewModel.syncSummary == summary)
+    #expect(viewModel.syncSummary?.successCount == 1)
+    #expect(viewModel.syncSummary?.failureCount == 1)
 }
 
 @Test("GitHub 安装访问令牌会在仓库 API 前完成交换")

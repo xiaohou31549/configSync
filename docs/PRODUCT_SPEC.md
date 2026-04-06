@@ -10,6 +10,7 @@ SecretSync 是一个 macOS 原生桌面工具，用于本地维护 GitHub Action
 - 按仓库搜索、筛选、多选
 - 批量同步并展示结果
 - GitHub App 本地配置保存，其中 `Client Secret` 存入 Keychain，其余元数据保存在本地配置文件
+- 当前 UI 仅暴露 Secret 路径；底层仍保留 Variable 数据模型与 GitHub API 封装，作为后续能力预留
 
 ## 非目标
 - 第一版不做从 GitHub 仓库导入 Secret

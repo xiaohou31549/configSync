@@ -103,12 +103,12 @@ public struct ConfigItemsView: View {
                             .buttonStyle(.bordered)
                             .accessibilityIdentifier("config.loginButton")
 
-                            Button("配置 OAuth") {
+                            Button("配置 GitHub App") {
                                 viewModel.loadAuthSettings()
                                 viewModel.showAuthSettings = true
                             }
                             .buttonStyle(.bordered)
-                            .accessibilityIdentifier("config.oauthSettingsButton")
+                            .accessibilityIdentifier("config.githubAppSettingsButton")
                         }
 
                         Text("当前还未登录 GitHub。你可以先维护本地 Secret，准备同步时再完成 GitHub 授权。")

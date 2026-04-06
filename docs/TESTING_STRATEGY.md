@@ -5,6 +5,11 @@
 - UI 测试：macOS 冒烟、关键编辑路径、截图
 - 脚本校验：架构边界、文档事实、功能表结构、后台清理规则
 
+## 当前实现已覆盖的同步回归
+- `AppViewModel` 只在同步前置条件满足时触发执行，并把 `SyncSummary` 保留到页面状态，供结果面板展示成功/失败摘要
+- `GitHubSyncExecutor` 已覆盖多仓库、多配置项执行，以及 GitHub Secret / Variable 上传的成功与失败分支
+- 当前 UI 默认路径只暴露 Secret；Variable 相关回归以领域层和基础设施层单元测试为主，避免文档误判为“代码已删除”
+
 ## 当前必须覆盖的存储回归
 - GitHub App 配置保存后，`Client Secret` 必须进入 Keychain，`auth.json` 不得包含明文 `Client Secret`
 - 旧版包含 `Client Secret` 的 `auth.json` 必须可读取，并在读取后自动迁移到 Keychain

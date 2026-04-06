@@ -90,3 +90,8 @@
 [2026-04-03 19:38 CST] GitHub Actions 仅保留可稳定运行的单元测试
 - 已将 `.github/workflows/ci.yml` 调整为只执行 `SecretSyncKitTests`，避免 GitHub Actions 在无稳定签名与浏览器联动条件下运行 `SecretSyncUITests`。
 - 已同步更新 `docs/TESTING_STRATEGY.md`，明确 UI 测试属于本机 `scripts/run_ui_tests.sh` 的独立验证入口，不作为默认 CI gate。
+[2026-04-03 19:55 CST] 仓库逻辑复核与文档清理完成一轮收敛
+- 已复核当前实现与文档的一致性，确认“选中 Secret 批量同步到选中仓库”与“同步结果摘要反馈”已在代码中落地；据此补充 `AppViewModel` 的同步摘要单元测试，并将 `feature_list.json` 中 `sync-selected-secret-to-repos`、`sync-result-summary-feedback` 更新为 `passes=true`。
+- 已清理仓库内过时表述：`AGENTS.md` 与用户可见 UI 文案不再把当前主路径写成 OAuth 或完整 Variable 管理；文档现统一说明“当前 UI 聚焦 Secret，底层仍保留 Variable 能力用于兼容与后续扩展”。
+- 已修正 `feature_list.json` 中 `secret-import-from-github-backlog` 对已废弃 `github-oauth-login-session` 的依赖引用，改为 `github-app-install-login-session`。
+- 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`。

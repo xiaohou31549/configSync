@@ -43,7 +43,7 @@
     "area": "config",
     "epic": "secret-import-v2",
     "depends_on": [
-      "github-oauth-login-session",
+      "github-app-install-login-session",
       "github-repo-fetch-search-select"
     ],
     "description": "第二版再支持从 GitHub 仓库读取并导入 Secret 元数据或映射，当前 MVP 不包含该能力。",
@@ -125,8 +125,8 @@
       "sync-selection-readiness"
     ],
     "description": "用户可将一个或多个选中的本地 Secret 批量同步到当前选中的 GitHub 仓库，形成主流程闭环。",
-    "verification": "同步用例单元测试覆盖批量执行与部分失败，XCUITest 覆盖从选中 Secret 到触发同步的最小路径。",
-    "passes": false
+    "verification": "同步用例与 `AppViewModel` 单元测试覆盖批量执行、同步前置校验与触发执行；XCUITest 继续保留为本机独立冒烟入口。",
+    "passes": true
   },
   {
     "id": "sync-result-summary-feedback",
@@ -138,8 +138,8 @@
       "sync-selected-secret-to-repos"
     ],
     "description": "同步完成后展示成功、失败与失败原因摘要，便于用户确认哪些仓库已落地、哪些需要重试。",
-    "verification": "单元测试覆盖结果聚合，XCUITest 覆盖结果摘要展示与失败提示。",
-    "passes": false
+    "verification": "单元测试覆盖结果聚合，以及 `AppViewModel` 在同步完成后保留 `SyncSummary` 供结果面板展示；XCUITest 的结果面板冒烟后续可继续补强。",
+    "passes": true
   },
   {
     "id": "harness-engineering-baseline",

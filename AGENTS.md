@@ -1,7 +1,8 @@
 # SecretSync 智能体目录
 
 ## 1. 目标
-- 本仓库是一个 macOS 原生桌面应用，用于本地管理 GitHub Actions Secrets / Variables，并批量同步到多个仓库。
+- 本仓库是一个 macOS 原生桌面应用，当前第一版聚焦本地管理 GitHub Actions Secrets，并批量同步到多个仓库。
+- 代码底层仍保留 Variable 模型与同步通道，供后续版本扩展；当前 UI 与默认用户路径不暴露 Variable 管理。
 - 本文件不是完整规范书，只提供入口、边界和标准工作流。
 
 ## 2. 先看哪里
@@ -49,7 +50,7 @@
 - `Domain` 不能依赖 `SwiftUI`、`AppKit`、`SQLite3`、网络实现。
 - `Application` 只能编排用例，不能直接触碰 UI 框架。
 - `Presentation` 不允许直接 new 具体基础设施实现，唯一例外是组合根 `AppContainer.swift`。
-- `Infrastructure` 负责 GitHub API、SQLite、Keychain、OAuth、加密等外部能力。
+- `Infrastructure` 负责 GitHub API、SQLite、Keychain、GitHub App 授权、加密等外部能力。
 - 新增跨层依赖前，先更新 `docs/ARCHITECTURE.md`，再更新边界检查脚本。
 
 ## 7. Harness 运行模式
@@ -65,7 +66,7 @@
 - 第一优先：`xcodebuild test` 单元测试
 - 第二优先：macOS `XCUITest` 冒烟与关键路径（通过 `scripts/run_ui_tests.sh` 独立执行）
 - 第三优先：脚本校验，包括文档、架构、特性表
-- 浏览器自动化不是主路径；仅在验证 OAuth 回调页或未来 Web 配套页面时使用
+- 浏览器自动化不是主路径；仅在验证 GitHub App 安装/授权页或未来 Web 配套页面时使用
 
 ## 9. 文档维护规则
 - `docs/` 是一级事实来源，尽量不要把规范散落在根目录

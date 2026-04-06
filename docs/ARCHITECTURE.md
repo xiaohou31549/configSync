@@ -12,6 +12,7 @@ SecretSync 采用单模块分层架构：`Presentation -> Application -> Domain 
 - 入口应用：`Sources/SecretSyncApp/App/SecretSyncApp.swift`
 - 组合根：`Sources/SecretSyncKit/Presentation/Shared/AppContainer.swift`
 - 组合根始终装配真实 GitHub App 认证、仓库目录与同步实现；Harness 只隔离数据存储、Keychain service 与会话恢复。
+- 当前 Presentation 默认只暴露 Secret 编辑与同步路径；`ConfigItemType.variable` 与对应 GitHub API 封装仍保留在 Domain / Infrastructure，供后续版本扩展。
 
 ## 强制边界
 - `Domain` 禁止依赖 UI 和系统存储实现。

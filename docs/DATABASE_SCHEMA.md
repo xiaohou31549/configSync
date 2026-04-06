@@ -8,7 +8,7 @@
 | `name` | `TEXT` | 规范化后的配置名 |
 | `type` | `TEXT` | `secret` 或 `variable` |
 | `description` | `TEXT` | 可选描述 |
-| `variable_value` | `TEXT` | 仅 Variable 持久化明文 |
+| `variable_value` | `TEXT` | 仅 Variable 持久化明文；当前 UI 默认不暴露 Variable 编辑，但底层为兼容与后续扩展保留该列 |
 | `created_at` | `REAL` | 创建时间 |
 | `updated_at` | `REAL` | 更新时间 |
 
