@@ -8,6 +8,7 @@ public struct AppContainer: Sendable {
     public let deleteConfigItemUseCase: DeleteConfigItemUseCase
     public let syncConfigItemsUseCase: SyncConfigItemsUseCase
     public let authSettingsStore: any AuthSettingsStore
+    public let authConfigurationLoader: GitHubAuthConfigurationLoader
     public let shouldRestoreSessionOnLaunch: Bool
     public let shouldOpenAuthorizationURL: Bool
     public let shouldUsePlaintextSecretEditorForAutomation: Bool
@@ -20,6 +21,7 @@ public struct AppContainer: Sendable {
         deleteConfigItemUseCase: DeleteConfigItemUseCase,
         syncConfigItemsUseCase: SyncConfigItemsUseCase,
         authSettingsStore: any AuthSettingsStore,
+        authConfigurationLoader: GitHubAuthConfigurationLoader = GitHubAuthConfigurationLoader(),
         shouldRestoreSessionOnLaunch: Bool,
         shouldOpenAuthorizationURL: Bool = true,
         shouldUsePlaintextSecretEditorForAutomation: Bool = false
@@ -31,6 +33,7 @@ public struct AppContainer: Sendable {
         self.deleteConfigItemUseCase = deleteConfigItemUseCase
         self.syncConfigItemsUseCase = syncConfigItemsUseCase
         self.authSettingsStore = authSettingsStore
+        self.authConfigurationLoader = authConfigurationLoader
         self.shouldRestoreSessionOnLaunch = shouldRestoreSessionOnLaunch
         self.shouldOpenAuthorizationURL = shouldOpenAuthorizationURL
         self.shouldUsePlaintextSecretEditorForAutomation = shouldUsePlaintextSecretEditorForAutomation
@@ -38,28 +41,27 @@ public struct AppContainer: Sendable {
 
     public static func bootstrap() -> AppContainer {
         let runtime = HarnessRuntime.current()
-        let keychainStore = KeychainStore(service: runtime.keychainService)
         let configRepository: any ConfigRepository
 
         if runtime.useInMemoryStore {
             configRepository = InMemoryConfigRepository()
         } else if let databaseURL = runtime.databaseURL {
-            configRepository = (try? SQLiteConfigRepository(databaseURL: databaseURL, keychainStore: keychainStore)) ?? InMemoryConfigRepository()
+            configRepository = (try? SQLiteConfigRepository(databaseURL: databaseURL)) ?? InMemoryConfigRepository()
         } else {
             configRepository = (try? SQLiteConfigRepository.makeDefault()) ?? InMemoryConfigRepository()
         }
 
         let authSettingsStore = FileAuthSettingsStore(
-            baseDirectoryOverride: runtime.authSettingsDirectory,
-            keychainStore: keychainStore
+            baseDirectoryOverride: runtime.authSettingsDirectory
         )
         let configurationLoader = GitHubAuthConfigurationLoader(
-            baseDirectoryOverride: runtime.authSettingsDirectory,
-            keychainStore: keychainStore
+            baseDirectoryOverride: runtime.authSettingsDirectory
         )
         let authRepository = GitHubAuthRepository(
             configurationLoader: configurationLoader,
-            keychainStore: keychainStore
+            sessionStore: FileAuthSessionStore(
+                stateURL: runtime.authSettingsDirectory?.appending(path: "auth-session.json")
+            )
         )
         let repositoryCatalog = GitHubRepositoryCatalog(
             client: GitHubAPIClient(authRepository: authRepository)
@@ -77,6 +79,7 @@ public struct AppContainer: Sendable {
             deleteConfigItemUseCase: DeleteConfigItemUseCase(configRepository: configRepository),
             syncConfigItemsUseCase: SyncConfigItemsUseCase(syncExecutor: syncExecutor),
             authSettingsStore: authSettingsStore,
+            authConfigurationLoader: configurationLoader,
             shouldRestoreSessionOnLaunch: !runtime.skipSessionRestore,
             shouldOpenAuthorizationURL: !runtime.isEnabled,
             shouldUsePlaintextSecretEditorForAutomation: runtime.isEnabled

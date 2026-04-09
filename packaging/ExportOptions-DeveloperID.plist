@@ -4,7 +4,11 @@
 <dict>
 	<key>method</key>
 	<string>developer-id</string>
+	<key>signingCertificate</key>
+	<string>Developer ID Application</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
+	<string>manual</string>
+	<key>teamID</key>
+	<string>4374YTC7UU</string>
 </dict>
 </plist>

@@ -8,7 +8,7 @@
 - `EXECUTION_PLAN.md`：Harness 落地路线与分阶段任务
 - `HARNESS_ENGINEERING.md`：智能体开发循环、文件职责、自动化约束
 - `TESTING_STRATEGY.md`：单元测试、UI 测试、脚本验证与 CI
-- `DATABASE_SCHEMA.md`：本地 SQLite 表结构与 Keychain 存储分工
+- `DATABASE_SCHEMA.md`：本地 SQLite、配置文件与会话文件的数据结构约定
 
 ## 维护原则
 - 文档必须短、准、可执行。

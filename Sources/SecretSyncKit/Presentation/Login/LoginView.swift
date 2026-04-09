@@ -32,13 +32,13 @@ public struct LoginView: View {
             .disabled(viewModel.isSigningIn)
 
             HStack {
-                Button("配置 GitHub App") {
+                Button(configurationButtonTitle) {
                     viewModel.loadAuthSettings()
                     viewModel.showAuthSettings = true
                 }
                 .buttonStyle(.bordered)
 
-                Text(viewModel.hasSavedGitHubAppConfiguration ? "已检测到本地 GitHub App 配置" : "当前未配置 GitHub App，登录前请先完成配置")
+                Text(configurationStatusText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -63,12 +63,36 @@ public struct LoginView: View {
                 }
             }
 
-            Text("推荐直接点击上方“配置 GitHub App”保存本地授权信息。当前实现会读取 `GITHUB_APP_ID`、`GITHUB_APP_CLIENT_ID`、`GITHUB_APP_CLIENT_SECRET`、`GITHUB_APP_SLUG`、`GITHUB_APP_PRIVATE_KEY_PATH` 和 `GITHUB_CALLBACK_PATH`。回调配置既支持完整 URL，也支持仅填写 path；其中 `Client Secret` 会存入 macOS Keychain，不会写进本地 `auth.json`。")
+            Text(configurationFootnote)
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
         }
         .padding(40)
         .frame(maxWidth: 520)
+    }
+
+    private var configurationButtonTitle: String {
+        viewModel.isUsingBundledGitHubAppConfiguration ? "高级配置" : "配置 GitHub App"
+    }
+
+    private var configurationStatusText: String {
+        switch viewModel.authConfigurationSource {
+        case .bundledApp:
+            "应用已内置 GitHub 连接配置，可直接登录"
+        case .environment:
+            "已检测到运行时 GitHub App 配置"
+        case .localFile:
+            "已检测到本地 GitHub App 配置"
+        case nil:
+            "当前未配置 GitHub App，登录前请先完成配置"
+        }
+    }
+
+    private var configurationFootnote: String {
+        if viewModel.isUsingBundledGitHubAppConfiguration {
+            return "当前发布包可内置 GitHub App 配置，普通用户默认只需完成浏览器授权与仓库选择。若需要切换到其他 GitHub App，可通过上方“高级配置”写入本地覆盖值。"
+        }
+        return "当前实现会优先读取环境变量、本地 `auth.json`，以及发布包内置的 GitHub App 配置。回调配置既支持完整 URL，也支持仅填写 path；本地保存时 `Client Secret` 会直接写入本地 `auth.json`。"
     }
 }
 
@@ -99,7 +123,7 @@ struct AuthSettingsSheet: View {
                 }
 
                 Section("本地存储说明") {
-                    Text("`Client Secret` 会保存在当前 macOS 用户的 Keychain 中，配置文件只保存 App ID、Client ID、Slug、私钥路径和回调地址。")
+                    Text("若应用已内置 GitHub App 配置，这里的保存值会作为本地覆盖配置优先使用。`Client Secret` 会与 App ID、Client ID、Slug、私钥路径和回调地址一起保存在本地 `auth.json`。")
                         .font(.footnote)
                     Text("私钥文件不会被复制到应用目录，仍使用你填写的本地路径。请确认该 PEM 文件位于仅当前用户可读的位置。")
                         .font(.footnote)

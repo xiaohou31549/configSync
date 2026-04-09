@@ -50,7 +50,7 @@ public final class AppViewModel: ObservableObject {
     @Published public var showAuthSettings = false
     @Published public var authSettingsDraft = GitHubAuthSettingsDraft()
     @Published public var authSettingsLocation = ""
-    @Published public var hasSavedGitHubAppConfiguration = false
+    @Published public private(set) var authConfigurationSource: GitHubAuthConfigurationSource?
     @Published public var isSavingAuthSettings = false
 
     private let container: AppContainer
@@ -129,6 +129,14 @@ public final class AppViewModel: ObservableObject {
 
     public var isEditingExistingConfigItem: Bool {
         selectedConfigItemID != nil
+    }
+
+    public var hasAvailableGitHubAppConfiguration: Bool {
+        authConfigurationSource != nil
+    }
+
+    public var isUsingBundledGitHubAppConfiguration: Bool {
+        authConfigurationSource == .bundledApp
     }
 
     public func loadInitialState(restoreSession: Bool) async {
@@ -338,9 +346,25 @@ public final class AppViewModel: ObservableObject {
 
     public func loadAuthSettings() {
         do {
-            authSettingsDraft = try container.authSettingsStore.loadDraft() ?? GitHubAuthSettingsDraft()
+            let localDraft = try container.authSettingsStore.loadDraft()
+            let resolvedConfiguration = try container.authConfigurationLoader.loadResolvedConfiguration()
+            authConfigurationSource = resolvedConfiguration?.source
+            if let localDraft {
+                authSettingsDraft = localDraft
+            } else if let resolvedConfiguration {
+                let configuration = resolvedConfiguration.configuration
+                authSettingsDraft = GitHubAuthSettingsDraft(
+                    appID: configuration.appID,
+                    clientID: configuration.clientID,
+                    clientSecret: configuration.clientSecret,
+                    slug: configuration.slug,
+                    privateKeyPath: configuration.privateKeyPath,
+                    callbackPath: configuration.callbackPath
+                )
+            } else {
+                authSettingsDraft = GitHubAuthSettingsDraft()
+            }
             authSettingsLocation = try container.authSettingsStore.settingsLocation().path()
-            hasSavedGitHubAppConfiguration = authSettingsDraft.isValid
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -356,7 +380,7 @@ public final class AppViewModel: ObservableObject {
             do {
                 try container.authSettingsStore.saveDraft(authSettingsDraft)
                 loadAuthSettings()
-                authProgressMessage = "GitHub App 配置已保存，Client Secret 已写入 Keychain"
+                authProgressMessage = "GitHub App 本地覆盖配置已保存，Client Secret 已写入本地配置文件"
                 showAuthSettings = false
             } catch {
                 errorMessage = error.localizedDescription
@@ -367,9 +391,10 @@ public final class AppViewModel: ObservableObject {
     public func clearAuthSettings() {
         do {
             try container.authSettingsStore.removeDraft()
-            authSettingsDraft = GitHubAuthSettingsDraft()
-            hasSavedGitHubAppConfiguration = false
-            authProgressMessage = "已清除本地 GitHub App 配置，并从 Keychain 删除 Client Secret"
+            loadAuthSettings()
+            authProgressMessage = isUsingBundledGitHubAppConfiguration
+                ? "已清除本地覆盖配置，并回退到应用内置 GitHub App 配置"
+                : "已清除本地 GitHub App 配置"
         } catch {
             errorMessage = error.localizedDescription
         }

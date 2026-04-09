@@ -17,7 +17,6 @@ settings:
     PRODUCT_NAME: SecretSync
     PRODUCT_BUNDLE_IDENTIFIER: com.xiaohou31549.SecretSync
     CODE_SIGN_STYLE: Automatic
-    CODE_SIGN_IDENTITY: Apple Development
     DEVELOPMENT_TEAM: 4374YTC7UU
     ENABLE_HARDENED_RUNTIME: YES
     GENERATE_INFOPLIST_FILE: YES
@@ -28,6 +27,11 @@ settings:
     INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
     INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2026 xiaohou31549
     MACOSX_DEPLOYMENT_TARGET: 14.0
+  configs:
+    Debug:
+      CODE_SIGN_IDENTITY: Apple Development
+    Release:
+      CODE_SIGN_IDENTITY: Developer ID Application
 
 targets:
   SecretSync:
@@ -35,17 +39,25 @@ targets:
     platform: macOS
     sources:
       - path: Sources/SecretSyncApp
+    resources:
+      - path: Sources/SecretSyncApp/Resources
+        excludes:
+          - Assets.xcassets
     dependencies:
       - package: SecretSyncPackage
         product: SecretSyncKit
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CODE_SIGN_IDENTITY: Apple Development
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 4374YTC7UU
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
         PRODUCT_MODULE_NAME: SecretSyncApp
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: Apple Development
+        Release:
+          CODE_SIGN_IDENTITY: Developer ID Application
     scheme:
       gatherCoverageData: false
       testTargets:

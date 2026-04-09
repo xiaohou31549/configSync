@@ -43,16 +43,11 @@ public protocol AuthSettingsStore: Sendable {
 
 public struct FileAuthSettingsStore: AuthSettingsStore {
     private let baseDirectoryOverride: URL?
-    private let keychainStore: KeychainStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    public init(
-        baseDirectoryOverride: URL? = nil,
-        keychainStore: KeychainStore = KeychainStore()
-    ) {
+    public init(baseDirectoryOverride: URL? = nil) {
         self.baseDirectoryOverride = baseDirectoryOverride
-        self.keychainStore = keychainStore
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     }
 
@@ -70,7 +65,8 @@ public struct FileAuthSettingsStore: AuthSettingsStore {
                 clientID: configuration.clientID,
                 slug: configuration.slug,
                 privateKeyPath: configuration.privateKeyPath,
-                callbackPath: configuration.callbackPath
+                callbackPath: configuration.callbackPath,
+                clientSecret: configuration.clientSecret
             )
             let sanitizedData = try encoder.encode(sanitized)
             try sanitizedData.write(to: url, options: Data.WritingOptions.atomic)
@@ -103,14 +99,14 @@ public struct FileAuthSettingsStore: AuthSettingsStore {
             clientID: configuration.clientID,
             slug: configuration.slug,
             privateKeyPath: configuration.privateKeyPath,
-            callbackPath: configuration.callbackPath
+            callbackPath: configuration.callbackPath,
+            clientSecret: configuration.clientSecret
         )
 
         let url = try settingsLocation()
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let data = try encoder.encode(storedConfiguration)
         try data.write(to: url, options: Data.WritingOptions.atomic)
-        try keychainStore.save(configuration.clientSecret, for: GitHubAuthSecretKeys.clientSecret)
     }
 
     public func removeDraft() throws {
@@ -118,7 +114,6 @@ public struct FileAuthSettingsStore: AuthSettingsStore {
         if FileManager.default.fileExists(atPath: url.path()) {
             try FileManager.default.removeItem(at: url)
         }
-        try keychainStore.delete(for: GitHubAuthSecretKeys.clientSecret)
     }
 
     public func settingsLocation() throws -> URL {
@@ -150,22 +145,12 @@ public struct FileAuthSettingsStore: AuthSettingsStore {
 
     private func loadStoredConfiguration(from data: Data) throws -> (configuration: GitHubAuthConfiguration, wasMigratedFromLegacyFile: Bool) {
         if let stored = try? decoder.decode(StoredGitHubAuthConfiguration.self, from: data) {
-            let keychainSecret = try keychainStore.load(for: GitHubAuthSecretKeys.clientSecret)
-            if let embeddedSecret = stored.clientSecret?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !embeddedSecret.isEmpty {
-                try keychainStore.save(embeddedSecret, for: GitHubAuthSecretKeys.clientSecret)
-                if let configuration = stored.resolvedConfiguration(clientSecret: embeddedSecret) {
-                    return (configuration, true)
-                }
-            }
-
-            if let configuration = stored.resolvedConfiguration(clientSecret: keychainSecret) {
+            if let configuration = stored.resolvedConfiguration() {
                 return (configuration, false)
             }
         }
 
         if let legacy = try? decoder.decode(GitHubAuthConfiguration.self, from: data) {
-            try keychainStore.save(legacy.clientSecret, for: GitHubAuthSecretKeys.clientSecret)
             return (legacy, true)
         }
 

@@ -95,3 +95,22 @@
 - 已清理仓库内过时表述：`AGENTS.md` 与用户可见 UI 文案不再把当前主路径写成 OAuth 或完整 Variable 管理；文档现统一说明“当前 UI 聚焦 Secret，底层仍保留 Variable 能力用于兼容与后续扩展”。
 - 已修正 `feature_list.json` 中 `secret-import-from-github-backlog` 对已废弃 `github-oauth-login-session` 的依赖引用，改为 `github-app-install-login-session`。
 - 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`。
+[2026-04-07 23:38 CST] 客户端内置 GitHub App 配置链路已接入
+- 已为 `GitHubAuthConfigurationLoader` 增加“环境变量 -> 本地 `auth.json` / Keychain 覆盖值 -> 应用包内置 `BundledGitHubApp.json`”的加载顺序，使发布包可内置默认 GitHub App 配置，普通用户默认只需完成授权与仓库选择。
+- 已补充单元测试覆盖内置配置解析、内置 PEM 资源路径解析，以及本地覆盖配置优先于内置配置的行为；并更新登录页与同步页文案，使内置配置存在时显示为普通用户路径，“配置 GitHub App”降级为高级覆盖入口。
+- 已同步更新 `docs/PRODUCT_SPEC.md`、`docs/ARCHITECTURE.md`、`docs/TESTING_STRATEGY.md`、`docs/DATABASE_SCHEMA.md` 与 `feature_list.json`，新增 `bundled-github-app-configuration` 并标记为通过。
+- 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`、`python3 scripts/validate_feature_list.py feature_list.json`、`python3 scripts/doc_gardening.py --check`、`./scripts/check_architecture.sh`。
+[2026-04-09 10:55 CST] Developer ID 正式分发链路已补齐
+- 已为 `build_app.sh`、`archive_release.sh`、`package_dmg.sh` 增加 `DRY_RUN` 能力，并允许 `package_dmg.sh` 复用已导出的 `.app`，避免正式发布时重复走开发签名构建链路。
+- 已新增 `scripts/release_notarized_dmg.sh`，将 `Developer ID` 归档、导出、DMG 打包、`notarytool` 公证、`stapler` 贴票据和 `spctl/codesign` 校验串成一条正式站外分发流程。
+- 已新增 `scripts/validate_packaging.sh`，并同步更新 `packaging/README.md`、`docs/TESTING_STRATEGY.md`、`feature_list.json`，补齐发布与验证说明。
+- 已验证通过：`scripts/validate_packaging.sh`；正式公证发布命令需在本机具备 `Developer ID Application` 证书与可用 `notarytool` 凭据后执行。
+[2026-04-09 18:10 CST] GitHub App Client Secret 改为本地文件存储
+- 已将 GitHub App 本地覆盖配置改为直接在 `auth.json` 中保存 `Client Secret`，不再依赖 Keychain 读取该字段；这样首次启动不会因为读取本地 GitHub App 覆盖配置而触发额外钥匙串弹窗。
+- 已同步更新 `GitHubAuthConfigurationLoader`、`FileAuthSettingsStore`、登录/高级配置页文案与对应单元测试，旧版 `GitHubAuthConfiguration` 文件会在读取时迁移到当前本地存储格式。
+- 已同步更新 `docs/PRODUCT_SPEC.md`、`docs/ARCHITECTURE.md`、`docs/DATABASE_SCHEMA.md`、`docs/TESTING_STRATEGY.md`、`docs/EXECUTION_PLAN.md`、`docs/HARNESS_ENGINEERING.md` 的事实描述。
+- 已验证通过：`xcodebuild -project SecretSync.xcodeproj -scheme SecretSync -destination 'platform=macOS' test -only-testing:SecretSyncKitTests`。
+[2026-04-09 19:25 CST] 运行时 Keychain 依赖已彻底移除
+- 已将 GitHub 登录会话、安装令牌缓存与本地 Secret 持久化统一改为文件或 SQLite 存储，`AppContainer` 与相关仓库实现不再注入 Keychain 依赖。
+- 已清理 `GitHubAuthRepository`、`GitHubAuthConfigurationLoader`、`FileAuthSettingsStore`、`SQLiteConfigRepository` 的遗留 `KeychainStore` 构造参数，并同步修正单元测试夹具。
+- 已同步更新 `docs/PRODUCT_SPEC.md`、`docs/ARCHITECTURE.md`、`docs/DATABASE_SCHEMA.md`、`docs/HARNESS_ENGINEERING.md`，明确当前版本运行时不读写 macOS Keychain。

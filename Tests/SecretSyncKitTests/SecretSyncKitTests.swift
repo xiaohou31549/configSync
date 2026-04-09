@@ -227,23 +227,21 @@ func authConfigurationLoadsFromLocalFile() throws {
     let fileManager = FileManager.default
     let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
     try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-settings.\(UUID().uuidString)")
-    try keychainStore.save("file-secret", for: GitHubAuthSecretKeys.clientSecret)
 
     let configuration = StoredGitHubAuthConfiguration(
         appID: "3241508",
         clientID: "Iv1.fileclient",
         slug: "secretvarsync",
         privateKeyPath: "/tmp/secretvarsync.pem",
-        callbackPath: "/oauth/callback"
+        callbackPath: "/oauth/callback",
+        clientSecret: "file-secret"
     )
     let data = try JSONEncoder().encode(configuration)
     try data.write(to: root.appending(path: "auth.json"))
 
     let loader = GitHubAuthConfigurationLoader(
         environment: [:],
-        baseDirectoryOverride: root,
-        keychainStore: keychainStore
+        baseDirectoryOverride: root
     )
 
     let loaded = try loader.loadIfAvailable()
@@ -259,7 +257,6 @@ func authConfigurationLoadsFromLocalFile() throws {
 func authConfigurationLoadsLegacyFile() throws {
     let fileManager = FileManager.default
     let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
-    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-legacy-load.\(UUID().uuidString)")
     try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
 
     let configuration = GitHubAuthConfiguration(
@@ -275,13 +272,87 @@ func authConfigurationLoadsLegacyFile() throws {
 
     let loader = GitHubAuthConfigurationLoader(
         environment: [:],
-        baseDirectoryOverride: root,
-        keychainStore: keychainStore
+        baseDirectoryOverride: root
     )
 
     let loaded = try loader.loadIfAvailable()
 
     #expect(loaded == configuration)
+}
+
+@Test("认证配置可从应用内置 GitHub App 配置加载")
+func authConfigurationLoadsFromBundledConfiguration() throws {
+    let bundled = """
+    {
+      "appID": "3241508",
+      "clientID": "Iv1.bundledclient",
+      "clientSecret": "bundled-secret",
+      "slug": "secretvarsync",
+      "privateKeyResource": "BundledGitHubAppPrivateKey.pem",
+      "callbackPath": "/oauth/callback"
+    }
+    """.data(using: .utf8)!
+    let expectedPrivateKeyURL = URL(filePath: "/Applications/SecretSync.app/Contents/Resources/BundledGitHubAppPrivateKey.pem")
+    let loader = GitHubAuthConfigurationLoader(
+        environment: [:],
+        bundledConfigurationData: bundled,
+        bundledResourceResolver: { resourceName in
+            if resourceName == "BundledGitHubAppPrivateKey.pem" {
+                return expectedPrivateKeyURL
+            }
+            return nil
+        }
+    )
+
+    let loaded = try loader.loadResolvedConfiguration()
+
+    #expect(loaded?.source == .bundledApp)
+    #expect(loaded?.configuration.appID == "3241508")
+    #expect(loaded?.configuration.clientID == "Iv1.bundledclient")
+    #expect(loaded?.configuration.clientSecret == "bundled-secret")
+    #expect(loaded?.configuration.privateKeyPath == expectedPrivateKeyURL.path())
+}
+
+@Test("本地 auth.json 会优先覆盖应用内置 GitHub App 配置")
+func localAuthConfigurationOverridesBundledConfiguration() throws {
+    let fileManager = FileManager.default
+    let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+    try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+
+    let localConfiguration = StoredGitHubAuthConfiguration(
+        appID: "3241508",
+        clientID: "Iv1.localclient",
+        slug: "secretvarsync",
+        privateKeyPath: "/tmp/local.pem",
+        callbackPath: "/oauth/callback",
+        clientSecret: "local-secret"
+    )
+    let localData = try JSONEncoder().encode(localConfiguration)
+    try localData.write(to: root.appending(path: "auth.json"))
+
+    let bundled = """
+    {
+      "appID": "3241508",
+      "clientID": "Iv1.bundledclient",
+      "clientSecret": "bundled-secret",
+      "slug": "secretvarsync",
+      "privateKeyPath": "/tmp/bundled.pem",
+      "callbackPath": "/oauth/callback"
+    }
+    """.data(using: .utf8)!
+
+    let loader = GitHubAuthConfigurationLoader(
+        environment: [:],
+        baseDirectoryOverride: root,
+        bundledConfigurationData: bundled
+    )
+
+    let loaded = try loader.loadResolvedConfiguration()
+
+    #expect(loaded?.source == .localFile)
+    #expect(loaded?.configuration.clientID == "Iv1.localclient")
+    #expect(loaded?.configuration.clientSecret == "local-secret")
+    #expect(loaded?.configuration.privateKeyPath == "/tmp/local.pem")
 }
 
 @Test("TokenBundle 会在临近过期时判定为失效")
@@ -393,8 +464,7 @@ func githubAppSignInAndRestoreSession() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.auth.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
+    let sessionStore = makeSessionStore()
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
             environment: [
@@ -411,7 +481,7 @@ func githubAppSignInAndRestoreSession() async throws {
                 OAuthCallbackPayload(code: "test-code", state: context.state)
             }
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let requestRecorder = RequestRecorder()
@@ -510,13 +580,10 @@ func githubRepositoryFetchDecodesRepositoryPayload() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.repo.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_repo_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
-    try keychainStore.save(
-        #" [{"id":987,"accountLogin":"octo-org","accountType":"Organization"}] "#.replacingOccurrences(of: " ", with: ""),
-        for: "auth.github.installations"
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_repo_token",
+        tokenType: "bearer",
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
     )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
@@ -528,7 +595,7 @@ func githubRepositoryFetchDecodesRepositoryPayload() async throws {
                 "GITHUB_APP_PRIVATE_KEY_PATH": "/tmp/secretvarsync.pem"
             ]
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let client = GitHubAPIClient(authRepository: authRepository, session: urlSession)
@@ -824,13 +891,10 @@ func githubInstallationTokenExchangeIsUsedForActionsAPI() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.installation-token.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
-    try keychainStore.save(
-        #" [{"id":987,"accountLogin":"octo-org","accountType":"Organization"}] "#.replacingOccurrences(of: " ", with: ""),
-        for: "auth.github.installations"
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_user_token",
+        tokenType: "bearer",
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
     )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
@@ -846,7 +910,7 @@ func githubInstallationTokenExchangeIsUsedForActionsAPI() async throws {
             session: urlSession,
             appJWTProvider: { _ in "signed-app-jwt" }
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let client = GitHubActionsAPIClient(authRepository: authRepository, session: urlSession)
@@ -905,10 +969,10 @@ func githubAuthRepositoryPaginatesInstallationsBeforeCaching() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.auth-pagination.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_user_token",
+        tokenType: "bearer"
+    )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
             environment: [
@@ -920,7 +984,7 @@ func githubAuthRepositoryPaginatesInstallationsBeforeCaching() async throws {
             ]
         ),
         oauthService: GitHubOAuthService(session: urlSession),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let requestRecorder = RequestRecorder()
@@ -987,11 +1051,11 @@ func githubSyncClientUploadsSecretsAndVariables() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.sync-success.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
-    try keychainStore.save(#"[{"id":987,"accountLogin":"octo-org","accountType":"Organization"}]"#, for: "auth.github.installations")
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_user_token",
+        tokenType: "bearer",
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
+    )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
             environment: [
@@ -1006,7 +1070,7 @@ func githubSyncClientUploadsSecretsAndVariables() async throws {
             session: urlSession,
             appJWTProvider: { _ in "signed-app-jwt" }
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let requestRecorder = RequestRecorder()
@@ -1080,11 +1144,11 @@ func githubSyncClientReportsInstallationPermissionDenied() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.sync-permission.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
-    try keychainStore.save(#"[{"id":987,"accountLogin":"octo-org","accountType":"Organization"}]"#, for: "auth.github.installations")
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_user_token",
+        tokenType: "bearer",
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
+    )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
             environment: [
@@ -1099,7 +1163,7 @@ func githubSyncClientReportsInstallationPermissionDenied() async throws {
             session: urlSession,
             appJWTProvider: { _ in "signed-app-jwt" }
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let executor = GitHubSyncExecutor(
@@ -1143,11 +1207,11 @@ func githubSyncClientReportsInvalidRepositoryPublicKey() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.sync-invalid-key.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
-    try keychainStore.save(#"[{"id":987,"accountLogin":"octo-org","accountType":"Organization"}]"#, for: "auth.github.installations")
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_user_token",
+        tokenType: "bearer",
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
+    )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
             environment: [
@@ -1162,7 +1226,7 @@ func githubSyncClientReportsInvalidRepositoryPublicKey() async throws {
             session: urlSession,
             appJWTProvider: { _ in "signed-app-jwt" }
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let executor = GitHubSyncExecutor(
@@ -1206,11 +1270,11 @@ func githubSyncClientReportsVariableUploadFailure() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     let urlSession = URLSession(configuration: configuration)
-    let keychainService = "com.tough.SecretSync.tests.sync-variable-failure.\(UUID().uuidString)"
-    let keychainStore = KeychainStore(service: keychainService)
-    try keychainStore.save("ghu_user_token", for: "auth.github.userAccessToken")
-    try keychainStore.save("bearer", for: "auth.github.userTokenType")
-    try keychainStore.save(#"[{"id":987,"accountLogin":"octo-org","accountType":"Organization"}]"#, for: "auth.github.installations")
+    let sessionStore = makeSessionStore(
+        accessToken: "ghu_user_token",
+        tokenType: "bearer",
+        installations: [GitHubInstallation(id: 987, accountLogin: "octo-org", accountType: "Organization")]
+    )
     let authRepository = GitHubAuthRepository(
         configurationLoader: GitHubAuthConfigurationLoader(
             environment: [
@@ -1225,7 +1289,7 @@ func githubSyncClientReportsVariableUploadFailure() async throws {
             session: urlSession,
             appJWTProvider: { _ in "signed-app-jwt" }
         ),
-        keychainStore: keychainStore,
+        sessionStore: sessionStore,
         session: urlSession
     )
     let executor = GitHubSyncExecutor(
@@ -1272,11 +1336,7 @@ func sqliteConfigRepositoryPersistsItems() async throws {
     let databaseURL = FileManager.default.temporaryDirectory
         .appending(path: UUID().uuidString)
         .appending(path: "config.sqlite3")
-    let keychainService = "com.tough.SecretSync.tests.\(UUID().uuidString)"
-    let repository = try SQLiteConfigRepository(
-        databaseURL: databaseURL,
-        keychainStore: KeychainStore(service: keychainService)
-    )
+    let repository = try SQLiteConfigRepository(databaseURL: databaseURL)
 
     let secret = try await repository.save(
         draft: ConfigItemDraft(name: "VPS_KEY", type: .secret, value: "super-secret", description: "")
@@ -1293,8 +1353,7 @@ func authSettingsStoreRoundTrip() throws {
     let fileManager = FileManager.default
     let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString)
     try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-store.\(UUID().uuidString)")
-    let store = FileAuthSettingsStore(baseDirectoryOverride: root, keychainStore: keychainStore)
+    let store = FileAuthSettingsStore(baseDirectoryOverride: root)
     let draft = GitHubAuthSettingsDraft(
         appID: "3241508",
         clientID: "client-id",
@@ -1308,7 +1367,6 @@ func authSettingsStoreRoundTrip() throws {
     let loaded = try store.loadDraft()
     let rawData = try Data(contentsOf: try store.settingsLocation())
     let rawText = try #require(String(data: rawData, encoding: .utf8))
-    let storedSecret = try keychainStore.load(for: GitHubAuthSecretKeys.clientSecret)
 
     #expect(loaded?.appID == "3241508")
     #expect(loaded?.clientID == "client-id")
@@ -1316,8 +1374,7 @@ func authSettingsStoreRoundTrip() throws {
     #expect(loaded?.slug == "secretvarsync")
     #expect(loaded?.privateKeyPath == "/tmp/secretvarsync.pem")
     #expect(loaded?.callbackPath == "/oauth/callback")
-    #expect(rawText.contains("client-secret") == false)
-    #expect(storedSecret == "client-secret")
+    #expect(rawText.contains("client-secret"))
 }
 
 @Test("覆盖目录下保存的 GitHub App 配置可被加载并生成真实授权地址")
@@ -1325,8 +1382,7 @@ func authConfigurationLoaderReadsOverrideDirectoryForAuthorizationURL() throws {
     let fileManager = FileManager.default
     let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString)
     try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-override.\(UUID().uuidString)")
-    let store = FileAuthSettingsStore(baseDirectoryOverride: root, keychainStore: keychainStore)
+    let store = FileAuthSettingsStore(baseDirectoryOverride: root)
     try store.saveDraft(
         GitHubAuthSettingsDraft(
             appID: "3241508",
@@ -1340,8 +1396,7 @@ func authConfigurationLoaderReadsOverrideDirectoryForAuthorizationURL() throws {
 
     let loader = GitHubAuthConfigurationLoader(
         environment: [:],
-        baseDirectoryOverride: root,
-        keychainStore: keychainStore
+        baseDirectoryOverride: root
     )
     let configuration = try #require(try loader.loadIfAvailable())
     let context = try GitHubOAuthService().prepareAuthorization(configuration: configuration)
@@ -1353,13 +1408,12 @@ func authConfigurationLoaderReadsOverrideDirectoryForAuthorizationURL() throws {
     #expect(context.redirectURI.hasSuffix("/oauth/callback"))
 }
 
-@Test("认证配置会把旧版文件中的 Client Secret 迁移到 Keychain")
+@Test("认证配置会把旧版文件中的 Client Secret 迁移为本地存储格式")
 func authSettingsStoreMigratesLegacyClientSecret() throws {
     let fileManager = FileManager.default
     let root = fileManager.temporaryDirectory.appending(path: UUID().uuidString)
     try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-    let keychainStore = KeychainStore(service: "com.tough.SecretSync.tests.auth-store-legacy.\(UUID().uuidString)")
-    let store = FileAuthSettingsStore(baseDirectoryOverride: root, keychainStore: keychainStore)
+    let store = FileAuthSettingsStore(baseDirectoryOverride: root)
     let legacy = GitHubAuthConfiguration(
         appID: "3241508",
         clientID: "legacy-client-id",
@@ -1376,11 +1430,9 @@ func authSettingsStoreMigratesLegacyClientSecret() throws {
     let loaded = try store.loadDraft()
     let rawData = try Data(contentsOf: settingsURL)
     let rawText = try #require(String(data: rawData, encoding: .utf8))
-    let storedSecret = try keychainStore.load(for: GitHubAuthSecretKeys.clientSecret)
 
     #expect(loaded?.clientSecret == "legacy-client-secret")
-    #expect(storedSecret == "legacy-client-secret")
-    #expect(rawText.contains("legacy-client-secret") == false)
+    #expect(rawText.contains("legacy-client-secret"))
 }
 
 private func waitForAuthorizationURL(recorder: ProgressRecorder) async throws -> URL {
@@ -1397,6 +1449,32 @@ private func waitForAuthorizationURL(recorder: ProgressRecorder) async throws ->
     }
 
     throw AppError.infrastructure("测试未等到 GitHub App 授权地址")
+}
+
+private func makeSessionStore(
+    accessToken: String = "",
+    tokenType: String = "bearer",
+    installations: [GitHubInstallation] = []
+) -> FileAuthSessionStore {
+    let stateURL = FileManager.default.temporaryDirectory
+        .appending(path: UUID().uuidString)
+        .appending(path: "auth-session.json")
+    let store = FileAuthSessionStore(stateURL: stateURL)
+    if !accessToken.isEmpty {
+        try? store.save(
+            StoredGitHubAuthSessionState(
+                accessToken: accessToken,
+                refreshToken: nil,
+                expiresAt: nil,
+                refreshTokenExpiresAt: nil,
+                tokenType: tokenType,
+                username: nil,
+                installations: installations,
+                installationTokens: [:]
+            )
+        )
+    }
+    return store
 }
 
 private func waitForCallbackReady(recorder: ProgressRecorder) async throws -> Int {

@@ -1,0 +1,8 @@
+{
+  "appID": "3241508",
+  "clientID": "Iv23liPcbu7jrAGxIylq",
+  "clientSecret": "02884e802752b4cd242bf5e01ce268706b193672",
+  "slug": "secretvarsync",
+  "privateKeyResource": "BundledGitHubAppPrivateKey.pem",
+  "callbackPath": "/oauth/callback"
+}

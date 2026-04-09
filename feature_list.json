@@ -88,6 +88,19 @@
     "passes": true
   },
   {
+    "id": "bundled-github-app-configuration",
+    "title": "客户端内置 GitHub App 配置",
+    "priority": 1,
+    "area": "auth",
+    "epic": "github-repository-linkage",
+    "depends_on": [
+      "github-app-install-login-session"
+    ],
+    "description": "发布包可内置 GitHub App 默认配置，使终端用户默认只需完成浏览器授权与仓库选择；若用户在应用内保存本地覆盖配置，则运行时优先使用本地覆盖值。",
+    "verification": "单元测试覆盖内置配置解析、内置 PEM 资源路径解析，以及本地 `auth.json` 对内置配置的优先级覆盖。",
+    "passes": true
+  },
+  {
     "id": "github-app-settings-persistence",
     "title": "GitHub App 本地配置保存",
     "priority": 3,
@@ -157,6 +170,15 @@
     "area": "branding",
     "description": "为 SecretSync 设计一套符合 macOS 桌面应用风格的 App icon，并完成 Xcode 资源集成，使应用在构建产物与系统界面中显示正式图标。",
     "verification": "补充图标资源后通过构建检查资源编译，并人工确认 App、Dock 与 Finder 中显示正确图标。",
+    "passes": true
+  },
+  {
+    "id": "developer-id-notarized-distribution",
+    "title": "Developer ID 公证发布链路",
+    "priority": 2,
+    "area": "release",
+    "description": "仓库提供面向站外分发的正式发布链路，能够完成 Developer ID 归档、导出、DMG 打包、公证、贴票据与本地验签；同时保留干运行校验入口，便于在无真实凭据环境中验证脚本流程。",
+    "verification": "执行 `scripts/validate_packaging.sh`，并在有证书与公证凭据的机器上运行 `TEAM_ID=... NOTARY_KEYCHAIN_PROFILE=... scripts/release_notarized_dmg.sh` 生成正式可分发 DMG。",
     "passes": true
   }
 ]

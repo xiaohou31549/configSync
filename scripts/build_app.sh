@@ -9,6 +9,19 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 SCHEME="${SCHEME:-SecretSync}"
 TEAM_ID="${TEAM_ID:-}"
 BUNDLE_ID="${BUNDLE_ID:-com.xiaohou31549.SecretSync}"
+SIGNING_IDENTITY="${SIGNING_IDENTITY:-Apple Development}"
+DRY_RUN="${DRY_RUN:-0}"
+
+run_cmd() {
+  if [[ "$DRY_RUN" == "1" ]]; then
+    printf '[DRY_RUN] '
+    printf '%q ' "$@"
+    printf '\n'
+    return 0
+  fi
+
+  "$@"
+}
 
 if [[ -z "$TEAM_ID" ]]; then
   echo "缺少 TEAM_ID。用法: TEAM_ID=你的TeamID scripts/build_app.sh"
@@ -18,10 +31,10 @@ fi
 cd "$ROOT_DIR"
 
 if [[ ! -d "$PROJECT_PATH" ]]; then
-  "$ROOT_DIR/scripts/generate_xcodeproj.sh"
+  run_cmd "$ROOT_DIR/scripts/generate_xcodeproj.sh"
 fi
 
-xcodebuild \
+run_cmd xcodebuild \
   -project "$PROJECT_PATH" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
@@ -30,10 +43,16 @@ xcodebuild \
   -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_DIR" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+  CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
   CODE_SIGN_STYLE=Automatic \
   build
 
 APP_PATH="$DERIVED_DATA_PATH/Build/Products/$CONFIGURATION/SecretSync.app"
+
+if [[ "$DRY_RUN" == "1" ]]; then
+  echo "构建完成: $APP_PATH"
+  exit 0
+fi
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "构建成功，但未找到 .app: $APP_PATH"

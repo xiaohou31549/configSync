@@ -3,12 +3,10 @@ import SQLite3
 
 public actor SQLiteConfigRepository: ConfigRepository {
     private let databaseURL: URL
-    private let keychainStore: KeychainStore
     private var database: OpaquePointer?
 
-    init(databaseURL: URL, keychainStore: KeychainStore = KeychainStore()) throws {
+    init(databaseURL: URL) throws {
         self.databaseURL = databaseURL
-        self.keychainStore = keychainStore
 
         let parentDirectory = databaseURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: parentDirectory, withIntermediateDirectories: true)
@@ -67,7 +65,7 @@ public actor SQLiteConfigRepository: ConfigRepository {
             case .variable:
                 value = variableValue ?? ""
             case .secret:
-                value = try keychainStore.load(for: secretKey(for: uuid)) ?? ""
+                value = variableValue ?? ""
             }
 
             items.append(
@@ -114,10 +112,8 @@ public actor SQLiteConfigRepository: ConfigRepository {
         switch draft.type {
         case .variable:
             try bind(draft.value, at: 5, to: statement)
-            try keychainStore.delete(for: secretKey(for: id))
         case .secret:
-            try bindNullable(nil, at: 5, to: statement)
-            try keychainStore.save(draft.value, for: secretKey(for: id))
+            try bind(draft.value, at: 5, to: statement)
         }
 
         sqlite3_bind_double(statement, 6, createdAt.timeIntervalSince1970)
@@ -148,7 +144,6 @@ public actor SQLiteConfigRepository: ConfigRepository {
             throw databaseError("删除配置项失败")
         }
 
-        try keychainStore.delete(for: secretKey(for: id))
     }
 
     private func item(for id: UUID) async throws -> ConfigItem? {
@@ -211,11 +206,6 @@ public actor SQLiteConfigRepository: ConfigRepository {
         }
         return String(cString: cString)
     }
-
-    private func secretKey(for id: UUID) -> String {
-        "secret.\(id.uuidString)"
-    }
-
     private func databaseError(_ prefix: String) -> AppError {
         Self.databaseError(from: database, prefix: prefix)
     }

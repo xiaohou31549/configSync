@@ -37,6 +37,6 @@
 ## GitHub App 本地配置约束
 - Harness 模式下的 GitHub App 配置文件应写入独立临时目录，不复用真实用户的 `auth.json`
 - Harness 模式下的配置保存与配置加载必须共享同一临时目录约定，避免 UI 自动化进入“保存成功但读取失败”的假阴性
-- Harness 模式下的 `Client Secret` 必须使用独立 Keychain service 保存，测试结束后可安全丢弃
-- 若验证旧版配置迁移，迁移目标也必须是 Harness 专用 Keychain，不能触碰真实本机条目
+- Harness 模式下 GitHub App 用户令牌与安装令牌必须写入独立临时目录下的 `auth-session.json`，测试结束后可安全丢弃
+- 若验证本地 GitHub App 配置迁移，必须把迁移文件放在 Harness 覆盖目录，不能触碰真实本机条目
 - Harness 不再提供 mock GitHub 服务；授权测试只验证真实 GitHub App 授权 URL、本地回调监听与错误提示，不触碰真实用户仓库

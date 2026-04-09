@@ -3,27 +3,19 @@ import Foundation
 public actor GitHubAuthRepository: AuthRepository {
     private let configurationLoader: GitHubAuthConfigurationLoader
     private let oauthService: GitHubOAuthService
-    private let keychainStore: KeychainStore
+    private let sessionStore: FileAuthSessionStore
     private let session: URLSession
     private let decoder = JSONDecoder()
-
-    private let userAccessTokenKey = "auth.github.userAccessToken"
-    private let userRefreshTokenKey = "auth.github.userRefreshToken"
-    private let userExpiresAtKey = "auth.github.userExpiresAt"
-    private let userRefreshExpiresAtKey = "auth.github.userRefreshExpiresAt"
-    private let usernameKey = "auth.github.username"
-    private let userTokenTypeKey = "auth.github.userTokenType"
-    private let installationsKey = "auth.github.installations"
 
     init(
         configurationLoader: GitHubAuthConfigurationLoader? = nil,
         oauthService: GitHubOAuthService = GitHubOAuthService(),
-        keychainStore: KeychainStore = KeychainStore(),
+        sessionStore: FileAuthSessionStore = FileAuthSessionStore(),
         session: URLSession = .shared
     ) {
-        self.configurationLoader = configurationLoader ?? GitHubAuthConfigurationLoader(keychainStore: keychainStore)
+        self.configurationLoader = configurationLoader ?? GitHubAuthConfigurationLoader()
         self.oauthService = oauthService
-        self.keychainStore = keychainStore
+        self.sessionStore = sessionStore
         self.session = session
     }
 
@@ -159,8 +151,19 @@ public actor GitHubAuthRepository: AuthRepository {
         guard !installations.isEmpty else {
             throw AppError.infrastructure("GitHub App 尚未安装到任何账号或组织，请先完成安装")
         }
-        try keychainStore.save(username, for: usernameKey)
-        try saveInstallations(installations)
+        var state = try loadSessionState(bundle: bundle) ?? StoredGitHubAuthSessionState(
+            accessToken: bundle.accessToken,
+            refreshToken: bundle.refreshToken,
+            expiresAt: bundle.expiresAt?.iso8601String,
+            refreshTokenExpiresAt: bundle.refreshTokenExpiresAt?.iso8601String,
+            tokenType: bundle.tokenType,
+            username: nil,
+            installations: [],
+            installationTokens: [:]
+        )
+        state.username = username
+        state.installations = installations
+        try sessionStore.save(state)
         return UserSession(
             username: username,
             accessToken: bundle.accessToken,
@@ -224,106 +227,103 @@ public actor GitHubAuthRepository: AuthRepository {
     }
 
     private func loadUserTokenBundle() throws -> TokenBundle? {
-        guard let accessToken = try keychainStore.load(for: userAccessTokenKey) else {
+        guard let state = try sessionStore.load() else {
             return nil
         }
 
-        let refreshToken = try keychainStore.load(for: userRefreshTokenKey)
-        let expiresAt = try keychainStore.load(for: userExpiresAtKey).flatMap(Date.fromISO8601)
-        let refreshTokenExpiresAt = try keychainStore.load(for: userRefreshExpiresAtKey).flatMap(Date.fromISO8601)
-        let tokenType = try keychainStore.load(for: userTokenTypeKey) ?? "bearer"
-
         return TokenBundle(
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            expiresAt: expiresAt,
-            refreshTokenExpiresAt: refreshTokenExpiresAt,
-            tokenType: tokenType
+            accessToken: state.accessToken,
+            refreshToken: state.refreshToken,
+            expiresAt: state.expiresAt.flatMap(Date.fromISO8601),
+            refreshTokenExpiresAt: state.refreshTokenExpiresAt.flatMap(Date.fromISO8601),
+            tokenType: state.tokenType
         )
     }
 
     private func saveUserTokenBundle(_ bundle: TokenBundle) throws {
-        try keychainStore.save(bundle.accessToken, for: userAccessTokenKey)
-        if let refreshToken = bundle.refreshToken {
-            try keychainStore.save(refreshToken, for: userRefreshTokenKey)
-        } else {
-            try keychainStore.delete(for: userRefreshTokenKey)
-        }
-
-        if let expiresAt = bundle.expiresAt {
-            try keychainStore.save(expiresAt.iso8601String, for: userExpiresAtKey)
-        } else {
-            try keychainStore.delete(for: userExpiresAtKey)
-        }
-
-        if let refreshTokenExpiresAt = bundle.refreshTokenExpiresAt {
-            try keychainStore.save(refreshTokenExpiresAt.iso8601String, for: userRefreshExpiresAtKey)
-        } else {
-            try keychainStore.delete(for: userRefreshExpiresAtKey)
-        }
-
-        try keychainStore.save(bundle.tokenType, for: userTokenTypeKey)
+        var state = try sessionStore.load() ?? StoredGitHubAuthSessionState(
+            accessToken: bundle.accessToken,
+            refreshToken: bundle.refreshToken,
+            expiresAt: bundle.expiresAt?.iso8601String,
+            refreshTokenExpiresAt: bundle.refreshTokenExpiresAt?.iso8601String,
+            tokenType: bundle.tokenType,
+            username: nil,
+            installations: [],
+            installationTokens: [:]
+        )
+        state.accessToken = bundle.accessToken
+        state.refreshToken = bundle.refreshToken
+        state.expiresAt = bundle.expiresAt?.iso8601String
+        state.refreshTokenExpiresAt = bundle.refreshTokenExpiresAt?.iso8601String
+        state.tokenType = bundle.tokenType
+        try sessionStore.save(state)
     }
 
     private func loadInstallations() throws -> [GitHubInstallation]? {
-        guard let raw = try keychainStore.load(for: installationsKey) else {
-            return nil
-        }
-        return try JSONDecoder().decode([GitHubInstallation].self, from: Data(raw.utf8))
+        try sessionStore.load()?.installations
     }
 
     private func saveInstallations(_ installations: [GitHubInstallation]) throws {
-        let data = try JSONEncoder().encode(installations)
-        guard let raw = String(data: data, encoding: .utf8) else {
-            throw AppError.infrastructure("安装列表编码失败")
-        }
-        try keychainStore.save(raw, for: installationsKey)
-    }
-
-    private func installationAccessTokenKey(for installationID: Int) -> String {
-        "auth.github.installation.\(installationID).accessToken"
-    }
-
-    private func installationExpiresAtKey(for installationID: Int) -> String {
-        "auth.github.installation.\(installationID).expiresAt"
+        var state = try sessionStore.load() ?? StoredGitHubAuthSessionState(
+            accessToken: "",
+            refreshToken: nil,
+            expiresAt: nil,
+            refreshTokenExpiresAt: nil,
+            tokenType: "bearer",
+            username: nil,
+            installations: [],
+            installationTokens: [:]
+        )
+        state.installations = installations
+        try sessionStore.save(state)
     }
 
     private func loadInstallationTokenBundle(for installationID: Int) throws -> TokenBundle? {
-        guard let accessToken = try keychainStore.load(for: installationAccessTokenKey(for: installationID)) else {
+        guard let state = try sessionStore.load(),
+              let stored = state.installationTokens[String(installationID)] else {
             return nil
         }
-        let expiresAt = try keychainStore.load(for: installationExpiresAtKey(for: installationID)).flatMap(Date.fromISO8601)
         return TokenBundle(
-            accessToken: accessToken,
+            accessToken: stored.accessToken,
             refreshToken: nil,
-            expiresAt: expiresAt,
+            expiresAt: stored.expiresAt.flatMap(Date.fromISO8601),
             refreshTokenExpiresAt: nil,
             tokenType: "bearer"
         )
     }
 
     private func saveInstallationTokenBundle(_ bundle: TokenBundle, for installationID: Int) throws {
-        try keychainStore.save(bundle.accessToken, for: installationAccessTokenKey(for: installationID))
-        if let expiresAt = bundle.expiresAt {
-            try keychainStore.save(expiresAt.iso8601String, for: installationExpiresAtKey(for: installationID))
-        } else {
-            try keychainStore.delete(for: installationExpiresAtKey(for: installationID))
-        }
+        var state = try sessionStore.load() ?? StoredGitHubAuthSessionState(
+            accessToken: "",
+            refreshToken: nil,
+            expiresAt: nil,
+            refreshTokenExpiresAt: nil,
+            tokenType: "bearer",
+            username: nil,
+            installations: [],
+            installationTokens: [:]
+        )
+        state.installationTokens[String(installationID)] = StoredInstallationTokenBundle(
+            accessToken: bundle.accessToken,
+            expiresAt: bundle.expiresAt?.iso8601String
+        )
+        try sessionStore.save(state)
     }
 
     private func clearStoredCredentials() throws {
-        let installations = try loadInstallations() ?? []
-        try keychainStore.delete(for: userAccessTokenKey)
-        try keychainStore.delete(for: userRefreshTokenKey)
-        try keychainStore.delete(for: userExpiresAtKey)
-        try keychainStore.delete(for: userRefreshExpiresAtKey)
-        try keychainStore.delete(for: usernameKey)
-        try keychainStore.delete(for: userTokenTypeKey)
-        try keychainStore.delete(for: installationsKey)
-        for installation in installations {
-            try keychainStore.delete(for: installationAccessTokenKey(for: installation.id))
-            try keychainStore.delete(for: installationExpiresAtKey(for: installation.id))
+        try sessionStore.remove()
+    }
+
+    private func loadSessionState(bundle: TokenBundle) throws -> StoredGitHubAuthSessionState? {
+        if var state = try sessionStore.load() {
+            state.accessToken = bundle.accessToken
+            state.refreshToken = bundle.refreshToken
+            state.expiresAt = bundle.expiresAt?.iso8601String
+            state.refreshTokenExpiresAt = bundle.refreshTokenExpiresAt?.iso8601String
+            state.tokenType = bundle.tokenType
+            return state
         }
+        return nil
     }
 
     private func persist(progress: GitHubAuthProgress, handler: AuthProgressHandler?) async {

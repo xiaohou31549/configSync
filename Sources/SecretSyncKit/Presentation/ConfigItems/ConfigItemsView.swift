@@ -103,7 +103,7 @@ public struct ConfigItemsView: View {
                             .buttonStyle(.bordered)
                             .accessibilityIdentifier("config.loginButton")
 
-                            Button("配置 GitHub App") {
+                            Button(viewModel.isUsingBundledGitHubAppConfiguration ? "高级配置" : "配置 GitHub App") {
                                 viewModel.loadAuthSettings()
                                 viewModel.showAuthSettings = true
                             }
@@ -111,7 +111,9 @@ public struct ConfigItemsView: View {
                             .accessibilityIdentifier("config.githubAppSettingsButton")
                         }
 
-                        Text("当前还未登录 GitHub。你可以先维护本地 Secret，准备同步时再完成 GitHub 授权。")
+                        Text(viewModel.isUsingBundledGitHubAppConfiguration
+                             ? "当前发布包已内置 GitHub 连接配置。你可以先维护本地 Secret，准备同步时直接完成 GitHub 授权。"
+                             : "当前还未登录 GitHub。你可以先维护本地 Secret，准备同步时再完成 GitHub 授权。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
