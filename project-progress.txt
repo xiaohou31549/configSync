@@ -114,3 +114,7 @@
 - 已将 GitHub 登录会话、安装令牌缓存与本地 Secret 持久化统一改为文件或 SQLite 存储，`AppContainer` 与相关仓库实现不再注入 Keychain 依赖。
 - 已清理 `GitHubAuthRepository`、`GitHubAuthConfigurationLoader`、`FileAuthSettingsStore`、`SQLiteConfigRepository` 的遗留 `KeychainStore` 构造参数，并同步修正单元测试夹具。
 - 已同步更新 `docs/PRODUCT_SPEC.md`、`docs/ARCHITECTURE.md`、`docs/DATABASE_SCHEMA.md`、`docs/HARNESS_ENGINEERING.md`，明确当前版本运行时不读写 macOS Keychain。
+[2026-04-09 18:36 CST] 登录后立即拉仓库的会话丢失问题已修复
+- 已为 `GitHubAuthRepository` 增加进程内会话状态缓存，登录成功后同一进程内的仓库拉取会优先复用刚建立的会话与安装信息，避免首次刷新时瞬时读空 `auth-session.json`。
+- 已新增“登录成功后可立即拉取仓库列表”单元测试，覆盖 OAuth 换 token、安装列表查询与仓库列表查询的完整链路，防止回归成“已登录但提示没有可用会话”。
+- 已重新执行正式发布脚本并生成新的公证安装包：`TEAM_ID=4374YTC7UU NOTARY_KEYCHAIN_PROFILE='SecretSync-Notary' scripts/release_notarized_dmg.sh`。

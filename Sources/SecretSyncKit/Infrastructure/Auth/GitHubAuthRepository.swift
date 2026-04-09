@@ -6,6 +6,7 @@ public actor GitHubAuthRepository: AuthRepository {
     private let sessionStore: FileAuthSessionStore
     private let session: URLSession
     private let decoder = JSONDecoder()
+    private var cachedState: StoredGitHubAuthSessionState?
 
     init(
         configurationLoader: GitHubAuthConfigurationLoader? = nil,
@@ -227,7 +228,7 @@ public actor GitHubAuthRepository: AuthRepository {
     }
 
     private func loadUserTokenBundle() throws -> TokenBundle? {
-        guard let state = try sessionStore.load() else {
+        guard let state = try loadPersistedState() else {
             return nil
         }
 
@@ -241,7 +242,7 @@ public actor GitHubAuthRepository: AuthRepository {
     }
 
     private func saveUserTokenBundle(_ bundle: TokenBundle) throws {
-        var state = try sessionStore.load() ?? StoredGitHubAuthSessionState(
+        var state = try loadPersistedState() ?? StoredGitHubAuthSessionState(
             accessToken: bundle.accessToken,
             refreshToken: bundle.refreshToken,
             expiresAt: bundle.expiresAt?.iso8601String,
@@ -256,15 +257,15 @@ public actor GitHubAuthRepository: AuthRepository {
         state.expiresAt = bundle.expiresAt?.iso8601String
         state.refreshTokenExpiresAt = bundle.refreshTokenExpiresAt?.iso8601String
         state.tokenType = bundle.tokenType
-        try sessionStore.save(state)
+        try persistState(state)
     }
 
     private func loadInstallations() throws -> [GitHubInstallation]? {
-        try sessionStore.load()?.installations
+        try loadPersistedState()?.installations
     }
 
     private func saveInstallations(_ installations: [GitHubInstallation]) throws {
-        var state = try sessionStore.load() ?? StoredGitHubAuthSessionState(
+        var state = try loadPersistedState() ?? StoredGitHubAuthSessionState(
             accessToken: "",
             refreshToken: nil,
             expiresAt: nil,
@@ -275,11 +276,11 @@ public actor GitHubAuthRepository: AuthRepository {
             installationTokens: [:]
         )
         state.installations = installations
-        try sessionStore.save(state)
+        try persistState(state)
     }
 
     private func loadInstallationTokenBundle(for installationID: Int) throws -> TokenBundle? {
-        guard let state = try sessionStore.load(),
+        guard let state = try loadPersistedState(),
               let stored = state.installationTokens[String(installationID)] else {
             return nil
         }
@@ -293,7 +294,7 @@ public actor GitHubAuthRepository: AuthRepository {
     }
 
     private func saveInstallationTokenBundle(_ bundle: TokenBundle, for installationID: Int) throws {
-        var state = try sessionStore.load() ?? StoredGitHubAuthSessionState(
+        var state = try loadPersistedState() ?? StoredGitHubAuthSessionState(
             accessToken: "",
             refreshToken: nil,
             expiresAt: nil,
@@ -307,15 +308,16 @@ public actor GitHubAuthRepository: AuthRepository {
             accessToken: bundle.accessToken,
             expiresAt: bundle.expiresAt?.iso8601String
         )
-        try sessionStore.save(state)
+        try persistState(state)
     }
 
     private func clearStoredCredentials() throws {
+        cachedState = nil
         try sessionStore.remove()
     }
 
     private func loadSessionState(bundle: TokenBundle) throws -> StoredGitHubAuthSessionState? {
-        if var state = try sessionStore.load() {
+        if var state = try loadPersistedState() {
             state.accessToken = bundle.accessToken
             state.refreshToken = bundle.refreshToken
             state.expiresAt = bundle.expiresAt?.iso8601String
@@ -324,6 +326,20 @@ public actor GitHubAuthRepository: AuthRepository {
             return state
         }
         return nil
+    }
+
+    private func loadPersistedState() throws -> StoredGitHubAuthSessionState? {
+        if let cachedState {
+            return cachedState
+        }
+        let loaded = try sessionStore.load()
+        cachedState = loaded
+        return loaded
+    }
+
+    private func persistState(_ state: StoredGitHubAuthSessionState) throws {
+        cachedState = state
+        try sessionStore.save(state)
     }
 
     private func persist(progress: GitHubAuthProgress, handler: AuthProgressHandler?) async {

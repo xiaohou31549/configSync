@@ -680,6 +680,106 @@ func githubRepositoryFetchDecodesRepositoryPayload() async throws {
     ))
 }
 
+@Test("登录成功后可立即拉取仓库列表")
+func repositoryFetchWorksImmediatelyAfterSignIn() async throws {
+    let fileManager = FileManager.default
+    let authRoot = fileManager.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+    try fileManager.createDirectory(at: authRoot, withIntermediateDirectories: true)
+
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockURLProtocol.self]
+    let urlSession = URLSession(configuration: configuration)
+    let authRepository = GitHubAuthRepository(
+        configurationLoader: GitHubAuthConfigurationLoader(
+            environment: [
+                "GITHUB_APP_ID": "3241508",
+                "GITHUB_APP_CLIENT_ID": "Iv1.testclient",
+                "GITHUB_APP_CLIENT_SECRET": "secret-123",
+                "GITHUB_APP_SLUG": "secretvarsync",
+                "GITHUB_APP_PRIVATE_KEY_PATH": "/tmp/secretvarsync.pem"
+            ]
+        ),
+        oauthService: GitHubOAuthService(
+            session: urlSession,
+            authorizationCallbackAwaiter: { context, _ in
+                OAuthCallbackPayload(code: "test-code", state: context.state)
+            }
+        ),
+        sessionStore: FileAuthSessionStore(
+            stateURL: authRoot.appending(path: "auth-session.json")
+        ),
+        session: urlSession
+    )
+    let client = GitHubAPIClient(authRepository: authRepository, session: urlSession)
+
+    MockURLProtocol.requestHandler = { request in
+        let url = try #require(request.url)
+
+        switch (url.host, url.path) {
+        case ("github.com", "/login/oauth/access_token"):
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = """
+            {
+              "access_token": "ghu_test_token",
+              "refresh_token": "ghr_test_token",
+              "expires_in": 28800,
+              "refresh_token_expires_in": 15724800,
+              "token_type": "bearer"
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+
+        case ("api.github.com", "/user"):
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, #"{"login":"octocat"}"#.data(using: .utf8)!)
+
+        case ("api.github.com", "/user/installations"):
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = """
+            {
+              "installations": [
+                {
+                  "id": 987,
+                  "account": { "login": "octo-org", "type": "Organization" }
+                }
+              ]
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+
+        case ("api.github.com", "/user/installations/987/repositories"):
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = """
+            {
+              "repositories": [
+                {
+                  "id": 42,
+                  "name": "secretsync",
+                  "full_name": "octocat/secretsync",
+                  "owner": { "login": "octocat" },
+                  "private": true,
+                  "default_branch": "main",
+                  "archived": false
+                }
+              ]
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+
+        default:
+            throw URLError(.unsupportedURL)
+        }
+    }
+    defer { MockURLProtocol.requestHandler = nil }
+
+    let session = try await authRepository.signIn(progress: nil)
+    let repositories = try await client.fetchRepositories()
+
+    #expect(session.username == "octocat")
+    #expect(repositories.count == 1)
+    #expect(repositories.first?.fullName == "octocat/secretsync")
+}
+
 @Test("仓库用例会按 fullName 排序")
 func fetchRepositoriesUseCaseSortsRepositories() async throws {
     let useCase = FetchRepositoriesUseCase(
